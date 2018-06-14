@@ -1,4 +1,4 @@
-// ==UserScript==
+﻿// ==UserScript==
 // @name        BloodWars atk and quest
 // @namespace   atkAndQuest@bw
 // @include     http://r*.fr.bloodwars.net*
@@ -11,11 +11,19 @@
 
 //******************* Global variables - DO NOT TOUCH *******************
 
+const __GM3REQUEST = (('undefined' !== typeof GM_xmlhttpRequest) ? GM_xmlhttpRequest : undefined);  // GM 3.x and earlier
+const __GM4REQUEST = (('undefined' !== typeof GM)                ? GM.xmlHttpRequest : undefined);  // GM 4.0+
+const __CHECKFUN   = (fun => (('function' === typeof fun) ? fun : undefined));
+
+const __XMLREQUEST = (__CHECKFUN(__GM4REQUEST) || __CHECKFUN(__GM4REQUEST));
+
 //var ME = /class="me".*?>(.*?)</.exec(document.body.innerHTML)[1];
 var SERV = /r(\d+)\.fr/.exec(window.location.href)[1];
 var BASE_URL = /^(.*\.net)/.exec(window.location.href)[1];
 var ATK_PAGE_URL = BASE_URL + '/?a=ambush&opt=atk';
 var ARMOURY_PAGE_URL = BASE_URL + '/?a=equip';
+var ARMOURY_ITEMS_FIRST_PAGE_URL = BASE_URL + '/_ajaxLoadArmoryItems.php?type=equip&page=1';
+var ARMOURY_ITEMS_SECOND_PAGE_URL = BASE_URL + '/_ajaxLoadArmoryItems.php?type=equip&page=2';
 var AUCTION_PAGE_URL = BASE_URL + '/?a=auction&do=itemlist';
 var CLAN_PAGE_URL = BASE_URL + '/?a=aliance';
 var EXPE_PAGE_URL = BASE_URL + '/?a=cevent';
@@ -135,7 +143,8 @@ var EXPE_SITE = {
   'La bibliothèque brulée': 31,
   'Obélisque': 32,
   'La salle des polymorphes': 33,
-  'Terre pustulée': 34
+  'Terre pustulée': 34,
+  'La fierté des défenseurs': 35
 };
 var RDC_SITE = {
   'Banlieues': 1,
@@ -262,6 +271,11 @@ var EXPE_ARK_EVO_TO_JOIN_LOCATION_UT1 = {};
 var EXPE_ARK_EVO_TO_JOIN_LOCATION_UT2 = {};
 var EXPE_ARK_EVO_TO_JOIN_LOCATION_UT3 = {};
 var EXPE_ARK_EVO_TO_JOIN_LOCATION_MORIA = {};
+
+var OUU_TO_LAUNCH_EXPO_UT1 = 0;
+var OUU_TO_LAUNCH_EXPO_UT2 = 0;
+var OUU_TO_LAUNCH_EXPO_UT3 = 0;
+var OUU_TO_LAUNCH_EXPO_MORIA = 0;
 
 var NON_SAMA_EXPO_TO_JOIN_UT1 = {};
 var NON_SAMA_EXPO_TO_JOIN_UT2 = {};
@@ -482,6 +496,12 @@ var EXPE_ARK_EVO_TO_JOIN_LOCATION_SERV = {
   3: EXPE_ARK_EVO_TO_JOIN_LOCATION_MORIA,
   4: EXPE_ARK_EVO_TO_JOIN_LOCATION_UT3
 };
+var OUU_TO_LAUNCH_EXPO_SERV = {
+  1: OUU_TO_LAUNCH_EXPO_UT1,
+  2: OUU_TO_LAUNCH_EXPO_UT2,
+  3: OUU_TO_LAUNCH_EXPO_MORIA,
+  4: OUU_TO_LAUNCH_EXPO_UT3
+};
 var NON_SAMA_EXPO_TO_JOIN_SERV = {
   1: NON_SAMA_EXPO_TO_JOIN_UT1,
   2: NON_SAMA_EXPO_TO_JOIN_UT2,
@@ -501,6 +521,7 @@ var DEFAULT_STUFF_TO_JOIN_EXPE = DEFAULT_STUFF_TO_JOIN_EXPE_SERV[SERV];
 var EXPE_STUFF_TO_JOIN_LOCATION = EXPE_STUFF_TO_JOIN_LOCATION_SERV[SERV];
 var DEFAULT_ARK_EVO_TO_JOIN_EXPO = DEFAULT_ARK_EVO_TO_JOIN_EXPO_SERV[SERV];
 var EXPE_ARK_EVO_TO_JOIN_LOCATION = EXPE_ARK_EVO_TO_JOIN_LOCATION_SERV[SERV];
+var OUU_TO_LAUNCH_EXPO = OUU_TO_LAUNCH_EXPO_SERV[SERV];
 var NON_SAMA_EXPO_TO_JOIN = NON_SAMA_EXPO_TO_JOIN_SERV[SERV];
 var EXPE_TO_LAUNCH = EXPE_TO_LAUNCH_SERV[SERV];
 EXPE_TO_LAUNCH.eventJoinPageUrl = EXPE_JOIN_PAGE_URL;
@@ -745,21 +766,22 @@ var cleanup = function(page) {
     return;
   }
 
-  var borrowedCaItem = getBorrowedCaItem(source);
-  if(borrowedCaItem.length > 0) {
-    returnBorrowedCaItem(cleanup, source);
-    return;
-  }
+  getBorrowedCaItem().then(function(borrowedCaItem) {
+    if(borrowedCaItem.length > 0) {
+      returnBorrowedCaItem(cleanup, source);
+      return;
+    }
 
-  cleanupRunning = false;
-  updateMessage('Prêt à changer de mode');
-  updateMode();
-  return;
+    cleanupRunning = false;
+    updateMessage('Prêt à changer de mode');
+    updateMode();
+    return;
+  });
 };
 
-var completeAllExpeToJoin = function(expePage) {
-  for(var i = 0; i < allExpeToJoin.length; ++i) {
-    var expeInfo = allExpeToJoin[i];
+var completeAllExpeToJoin = function(expePage, allEventToJoin) {
+  for(var i = 0; i < allEventToJoin.length; ++i) {
+    var expeInfo = allEventToJoin[i];
 
     var startRegex = 'uid=(\\d+)"(?:.*?\\r?\\n)(?:.*?\\r?\\n)(?:.*?\\r?\\n)(?:.*?)onmouseout="nd\\(\\);">(?!\\S)';
     var readLocation = '(?:(?:(?!expDesc_).)*?\\r?\\n)+?(.*?)<\\/td>';
@@ -769,7 +791,7 @@ var completeAllExpeToJoin = function(expePage) {
 
     var expeInfoRead = re.exec(expePage);
     if(expeInfoRead === null) {
-      allExpeToJoin.splice(i--, 1);
+      allEventToJoin.splice(i--, 1);
       continue;
     }
 
@@ -778,7 +800,6 @@ var completeAllExpeToJoin = function(expePage) {
     var numberOfPlayer = expeInfoRead[3] | 0;
     var maxNumberOfPlayer = null;
     var description = expeInfoRead[4].replace(/&.*?;/g, '').replace(/\d+\s*h(?:\s*\d+)?/g, '');
-
     var numberRegex = /\d+/g;
     var maxTry = 10;
     while ((regexpResult = numberRegex.exec(description)) !== null && maxTry-- > 0) {
@@ -800,25 +821,44 @@ var completeAllExpeToJoin = function(expePage) {
   }
 };
 
-var getBorrowedCaItem = function(source) {
-  var borrowedCaItem = [];
+var getBorrowedCaItem = function() {
+  var firstItemsPromise = syncXmlRequest({
+    method: "GET",
+    url: ARMOURY_ITEMS_FIRST_PAGE_URL
+  });
+  var nextItemsPromise = syncXmlRequest({
+    method: "GET",
+    url: ARMOURY_ITEMS_SECOND_PAGE_URL
+  });
 
-  var id;
-  var objectOfCaRegex;
+  return Promise.all([firstItemsPromise, nextItemsPromise]).then(function(responses) {
+    var firstItems = JSON.parse(responses[0].response).data;
+    var nextItems = JSON.parse(responses[1].response).data;
 
-  if(CLAN_ARMOURY_SHELF > 0) {
-    objectOfCaRegex = new RegExp('box\\[' + (CLAN_ARMOURY_SHELF - 1) + '\\]\\[(\\d+)\\]', 'g');
-    while((id = objectOfCaRegex.exec(source)) !== null) {
-      borrowedCaItem.push(id[1]);
+    var clanArmouryKey = " 20";
+    var personalClanArmouryShelfKey = " " + (CLAN_ARMOURY_SHELF - 1);
+
+    var itemsHtml = '';
+
+    if(firstItems.itemCount > 0) {
+      itemsHtml += firstItems.itemTabHtml[clanArmouryKey] || '';
+      itemsHtml += firstItems.itemTabHtml[personalClanArmouryShelfKey] || '';
     }
-  }
 
-  objectOfCaRegex = /return=(\d+)';">RENDRE/g;
-  while((id = objectOfCaRegex.exec(source)) !== null) {
-    borrowedCaItem.push(id[1]);
-  }
+    if(nextItems.itemCount > 0) {
+      itemsHtml += nextItems.itemTabHtml[clanArmouryKey] || '';
+      itemsHtml += nextItems.itemTabHtml[personalClanArmouryShelfKey] || '';
+    }
 
-  return borrowedCaItem;
+    var borrowedCaItem = [];
+    var re = /itemid\[(\d+)\]/g;
+    var itemId;
+    while(itemId = re.exec(itemsHtml)) {
+      borrowedCaItem.push(itemId[1]);
+    }
+
+    return borrowedCaItem;
+  });
 };
 
 var getCurrentLol = function(page) {
@@ -843,7 +883,7 @@ var getExpeStuff = function() {
     if(EXPE_STUFF_FOR_LOCATION.hasOwnProperty(location)) {
       var tmpExpeStuff = EXPE_STUFF_FOR_LOCATION[location];
 
-      if(expeStuff === null) {
+      if(expeStuff === null || location === EXPE_TO_LAUNCH.location) {
         expeStuff = tmpExpeStuff;
       }
     }
@@ -1138,22 +1178,22 @@ var resetCurrentStuffLoadFail = function() {
 };
 
 var returnBorrowedCaItem = function(callback, source) {
-  var borrowedCaItem = getBorrowedCaItem(source);
+  getBorrowedCaItem().then(function(borrowedCaItem) {
+    if(borrowedCaItem.length > 0) {
+      var returnBorrowedCaItemParam = '';
 
-  if(borrowedCaItem.length > 0) {
-    var returnBorrowedCaItemParam = '';
+      for(var itemId of borrowedCaItem) {
+        returnBorrowedCaItemParam += '&itemid%5B' + itemId + '%5D=on';
+      }
 
-    for(var itemId of borrowedCaItem) {
-      returnBorrowedCaItemParam += '&itemid%5B' + itemId + '%5D=on';
+      updateMessage('Remise en ac des items empruntés');
+      loadPage('POST', ARMOURY_PAGE_URL, 'newTab=10&armoryPutIn=%C3%80+L%60ARMURERIE+DU+CLAN' + returnBorrowedCaItemParam, callback);
+      return;
+    } else {
+      callback();
+      return;
     }
-
-    updateMessage('Remise en ac des items empruntés');
-    loadPage('POST', ARMOURY_PAGE_URL, 'newTab=10&armoryPutIn=%C3%80+L%60ARMURERIE+DU+CLAN' + returnBorrowedCaItemParam, callback);
-    return;
-  } else {
-    callback();
-    return;
-  }
+  });
 };
 
 var sendShoutboxMessage = function(type, msg) {
@@ -1186,13 +1226,15 @@ var _updateStuffVerification = function(callback, page) {
     updateMessage('Stuff équipé');
     resetCurrentStuffLoadFail();
 
-    if(getBorrowedCaItem(source).length > 0) {
-      returnBorrowedCaItem(callback, source);
-      return;
-    } else {
-      callback(page);
-      return;
-    }
+    getBorrowedCaItem().then(function(borrowedCaItem) {
+      if(borrowedCaItem.length > 0) {
+        returnBorrowedCaItem(callback, source);
+        return;
+      } else {
+        callback(page);
+        return;
+      }
+    });
   } else if(/L`ensemble incomplet!/.exec(source) !== null) { //Missing part in stuff
     updateMessage('Le stuff n\'est pas complet');
     stuffOn = -1;
@@ -1212,14 +1254,15 @@ var _updateStuffVerification = function(callback, page) {
       questRunning = false;
     }
 
-    var borrowedCaItem = getBorrowedCaItem(source);
-    if(borrowedCaItem.length > 0) {
-      returnBorrowedCaItem(updateMode, source);
-      return;
-    } else {
-      updateMode();
-      return;
-    }
+    getBorrowedCaItem().then(function(borrowedCaItem) {
+      if(borrowedCaItem.length > 0) {
+        returnBorrowedCaItem(updateMode, source);
+        return;
+      } else {
+        updateMode();
+        return;
+      }
+    });
   } else {
     updateMessage('Une erreur a eu lieu lors du changement de stuff.');
 
@@ -1244,17 +1287,40 @@ var _updateStuffVerification = function(callback, page) {
         questRunning = false;
       }
 
-      var borrowedCaItem = getBorrowedCaItem(source);
-      if(borrowedCaItem.length > 0) {
-        returnBorrowedCaItem(updateMode, source);
-        return;
-      } else {
-        updateMode();
-        return;
-      }
+      getBorrowedCaItem().then(function(borrowedCaItem) {
+        if(borrowedCaItem.length > 0) {
+          returnBorrowedCaItem(updateMode, source);
+          return;
+        } else {
+          updateMode();
+          return;
+        }
+      });
     }
   }
 };
+
+var syncXmlRequest = function(d) {
+  return new Promise(function(resolve, reject) {
+    const __D = { };
+
+    Object.assign(__D, d);
+
+    __D.onload = (result => {
+      if (result.statusText === 'OK') {
+        resolve(result);
+      } else {
+        reject(result.statusText);
+      }
+    });
+
+    if (__XMLREQUEST) {
+      __XMLREQUEST(__D);
+    } else {
+      reject("XHR handler is missing");
+    }
+  });
+}
 
 var updateMode = function(page) {
   if(cleanupRunning) {
@@ -1552,7 +1618,7 @@ var updateQuestMode = function(questPage) {
       return;
     } else {
       if(!questMessageSent) {
-        sendShoutboxMessage('clan', getNextQuestMessage(questLeft));
+        //sendShoutboxMessage('clan', getNextQuestMessage(questLeft));
       }
       questMessageSent = true;
       launchNextQuest();
@@ -1840,9 +1906,10 @@ var joinExpe = function(expePage) {
     return;
   }
 
-  completeAllExpeToJoin(source); // Complete the following information: location, numberOfPlayer, maxNumberOfPlayer, isCut
+  completeAllExpeToJoin(source, allExpeToJoin); // Complete the following information: launcherId, location, numberOfPlayer, maxNumberOfPlayer, isCut
   var hasJoinedAnExpeToday = /La possibilité de joindre la prochaine expédition: <b>MAINTENANT<\/b><\/td>/.exec(source) === null || /cancelJoin(?:.*\r?\n){4}\s*\r?\n/.exec(source) !== null;
   if(allExpeToJoin.length <= 0) {
+    allExpeToJoin = [];
     updateStuff(updateMode, DEF_STUFF);
     return;
   } else {
@@ -1861,8 +1928,9 @@ var joinExpe = function(expePage) {
 
           updateMessage('En train de joindre l\'expédition ' + expe.id);
           if(true || !hasJoinedAnExpeToday || expe.location !== NON_SAMA_EXPO_TO_JOIN.location) {
-            var iAmNotSamaritan = !hasJoinedAnExpeToday && expe.location === NON_SAMA_EXPO_TO_JOIN.location && expe.numberOfPlayer < NON_SAMA_EXPO_TO_JOIN.maxParticipant && expe.maxNumberOfPlayer !== null && expe.maxNumberOfPlayer <= NON_SAMA_EXPO_TO_JOIN.maxParticipant;
-            var data = 'join%5B%5D=' + expe.id + '&samarytanin=' + (iAmNotSamaritan ? '0' : '1') + arkEvoFor(expeArkEvo) + '&onetimeSelected=0&joinEvent=Joindre+les+exp%C3%A9ditions+choisies';
+           	var iAmNotSamaritan = !hasJoinedAnExpeToday && expe.location === NON_SAMA_EXPO_TO_JOIN.location && (NON_SAMA_EXPO_TO_JOIN.maxParticipant === null || (expe.numberOfPlayer < NON_SAMA_EXPO_TO_JOIN.maxParticipant && expe.maxNumberOfPlayer !== null && expe.maxNumberOfPlayer <= NON_SAMA_EXPO_TO_JOIN.maxParticipant));
+            var ouu = iAmNotSamaritan ? OUU_TO_LAUNCH_EXPO : 0;
+            var data = 'join%5B%5D=' + expe.id + '&samarytanin=' + (iAmNotSamaritan ? '0' : '1') + arkEvoFor(expeArkEvo) + '&onetimeSelected=' + ouu + '&joinEvent=Joindre+les+exp%C3%A9ditions+choisies';
             loadPage('POST', EXPE_JOIN_PAGE_URL, data, joinExpe);
             return; 
           } else {
@@ -1922,12 +1990,12 @@ var tryLaunchingExpeThroughSacrifice = function(sacrificePage) {
   var expeArkEvo = EXPE_ARK_EVO_TO_JOIN_LOCATION[EXPE_TO_LAUNCH.location] || DEFAULT_ARK_EVO_TO_JOIN_EXPO;
   if(canSacrifice && myReputation > reputationNeeded && myPopulation > populationNeeded) {
     updateMessage('En train de faire un sacrifice pour lancer une expedition sur le site ' + EXPE_TO_LAUNCH.location);
-    var data = 'locsel=' + EXPE_SITE[EXPE_TO_LAUNCH.location] + '&sac_pts=' + reputationNeeded + '&startExp=on' + arkEvoFor(expeArkEvo) + '&onetimeSelected=0&sacrifice=SACRIFIE';
+    var data = 'locsel=' + EXPE_SITE[EXPE_TO_LAUNCH.location] + '&sac_pts=' + reputationNeeded + '&startExp=on' + arkEvoFor(expeArkEvo) + '&onetimeSelected=' + OUU_TO_LAUNCH_EXPO + '&sacrifice=SACRIFIE';
     loadPage('POST', EXPE_SACRIFICE_PAGE_MAP_2_URL, data, manageInvitesOnLaunchedEvent.bind(null, EXPE_TO_LAUNCH, null));
     return;
   } else {
     updateMessage('En train de lancer une expedition avec la chasse sur le site ' + EXPE_TO_LAUNCH.location);
-    var data = 'locsel=' + EXPE_SITE[EXPE_TO_LAUNCH.location] + '&ceCostType=1' + arkEvoFor(expeArkEvo) + '&onetimeSelected=0&code_check=&submit=LANCER+L%60EXP%C3%89DITION';
+    var data = 'locsel=' + EXPE_SITE[EXPE_TO_LAUNCH.location] + '&ceCostType=1' + arkEvoFor(expeArkEvo) + '&onetimeSelected=' + OUU_TO_LAUNCH_EXPO + '&code_check=&submit=LANCER+L%60EXP%C3%89DITION';
     loadPage('POST', EXPE_LAUNCH_PAGE_MAP_2_URL, data, manageInvitesOnLaunchedEvent.bind(null, EXPE_TO_LAUNCH, null));
     return;
   }
@@ -1946,6 +2014,7 @@ var joinKoth = function(swrPage) {
     return;
   }
 
+  completeAllExpeToJoin(source, allKothToJoin); // Complete the following information: launcherId, location, numberOfPlayer, maxNumberOfPlayer, isCut
   var koth = allKothToJoin.shift();
   if(typeof koth !== 'undefined') {
     updateMessage('En train de joindre le rdc ' + koth.id);
