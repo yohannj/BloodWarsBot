@@ -1320,7 +1320,7 @@ var syncXmlRequest = function(d) {
       reject("XHR handler is missing");
     }
   });
-}
+};
 
 var updateMode = function(page) {
   if(cleanupRunning) {
@@ -1907,7 +1907,7 @@ var joinExpe = function(expePage) {
   }
 
   completeAllExpeToJoin(source, allExpeToJoin); // Complete the following information: launcherId, location, numberOfPlayer, maxNumberOfPlayer, isCut
-  var hasJoinedAnExpeToday = /La possibilité de joindre la prochaine expédition: <b>MAINTENANT<\/b><\/td>/.exec(source) === null || /cancelJoin(?:.*\r?\n){4}\s*\r?\n/.exec(source) !== null;
+  var hasJoinedAnExpeToday = /La possibilité de joindre la prochaine expédition: <b>MAINTENANT<\/b><\/td>/.exec(source) === null || /Ta demande est en attente de l`acceptation du fondateur de l`expédition(?:.*\r?\n)\s+\r?\n/.exec(source) !== null;
   if(allExpeToJoin.length <= 0) {
     allExpeToJoin = [];
     updateStuff(updateMode, DEF_STUFF);
