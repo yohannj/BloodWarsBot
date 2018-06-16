@@ -2018,7 +2018,7 @@ var joinKoth = function(swrPage) {
   var koth = allKothToJoin.shift();
   if(typeof koth !== 'undefined') {
     updateMessage('En train de joindre le rdc ' + koth.id);
-    var iAmSamaritan = /Possibilité de rejoindre une expédition Roi de la Colline: <b>MAINTENANT<\/b></.exec(source) === null || /cancelJoin/.exec(source) !== null;
+    var iAmSamaritan = /Possibilité de rejoindre une expédition Roi de la Colline: <b>MAINTENANT<\/b></.exec(source) === null || /Ta demande est en attente de l`acceptation du fondateur de l`expédition(?:.*\r?\n)\s+\r?\n/.exec(source) !== null;
     var data = 'join%5B%5D=' + koth.id + '&samarytanin=' + (iAmSamaritan ? '1' : '0') + arkEvoFor(ARK_EVO_TO_JOIN_RDC) + '&onetimeSelected=0&joinEvent=Joindre+les+exp%C3%A9ditions+choisies';
     loadPage('POST', SWR_JOIN_PAGE_URL, data, joinKoth);
     return;
