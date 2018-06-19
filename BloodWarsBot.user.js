@@ -766,7 +766,7 @@ var cleanup = function(page) {
     return;
   }
 
-  getBorrowedCaItem().then(function(borrowedCaItem) {
+  getBorrowedCaItem(source).then(function(borrowedCaItem) {
     if(borrowedCaItem.length > 0) {
       returnBorrowedCaItem(cleanup, source);
       return;
@@ -800,6 +800,7 @@ var completeAllExpeToJoin = function(expePage, allEventToJoin) {
     var numberOfPlayer = expeInfoRead[3] | 0;
     var maxNumberOfPlayer = null;
     var description = expeInfoRead[4].replace(/&.*?;/g, '').replace(/\d+\s*h(?:\s*\d+)?/g, '');
+
     var numberRegex = /\d+/g;
     var maxTry = 10;
     while ((regexpResult = numberRegex.exec(description)) !== null && maxTry-- > 0) {
@@ -821,39 +822,41 @@ var completeAllExpeToJoin = function(expePage, allEventToJoin) {
   }
 };
 
-var getBorrowedCaItem = function() {
-  var firstItemsPromise = syncXmlRequest({
+var getBorrowedCaItem = function(source) {
+  return syncXmlRequest({
     method: "GET",
     url: ARMOURY_ITEMS_FIRST_PAGE_URL
-  });
-  var nextItemsPromise = syncXmlRequest({
-    method: "GET",
-    url: ARMOURY_ITEMS_SECOND_PAGE_URL
-  });
-
-  return Promise.all([firstItemsPromise, nextItemsPromise]).then(function(responses) {
-    var firstItems = JSON.parse(responses[0].response).data;
-    var nextItems = JSON.parse(responses[1].response).data;
+  }).then(function(response) {
+    // manage loaded items
+    var loadedItems = JSON.parse(response.response).data;
 
     var clanArmouryKey = " 20";
     var personalClanArmouryShelfKey = " " + (CLAN_ARMOURY_SHELF - 1);
 
     var itemsHtml = '';
 
-    if(firstItems.itemCount > 0) {
-      itemsHtml += firstItems.itemTabHtml[clanArmouryKey] || '';
-      itemsHtml += firstItems.itemTabHtml[personalClanArmouryShelfKey] || '';
-    }
-
-    if(nextItems.itemCount > 0) {
-      itemsHtml += nextItems.itemTabHtml[clanArmouryKey] || '';
-      itemsHtml += nextItems.itemTabHtml[personalClanArmouryShelfKey] || '';
+    if(loadedItems.itemCount > 0) {
+      itemsHtml += loadedItems.itemTabHtml[clanArmouryKey] || '';
+      itemsHtml += loadedItems.itemTabHtml[personalClanArmouryShelfKey] || '';
     }
 
     var borrowedCaItem = [];
-    var re = /itemid\[(\d+)\]/g;
+    var objectOfCaRegex = /itemid\[(\d+)\]/g;
     var itemId;
-    while(itemId = re.exec(itemsHtml)) {
+    while(itemId = objectOfCaRegex.exec(itemsHtml)) {
+      borrowedCaItem.push(itemId[1]);
+    }
+
+    // manage items present in the source code:
+    if(CLAN_ARMOURY_SHELF > 0) {
+      objectOfCaRegex = new RegExp('data-itemId="(\\d+)".*\r?\n?.*?data-tab="' + (CLAN_ARMOURY_SHELF - 1) + '"', 'g');         //'box\\[' + (CLAN_ARMOURY_SHELF - 1) + '\\]\\[(\\d+)\\]', 'g');
+      while((itemId = objectOfCaRegex.exec(source)) !== null) {
+        borrowedCaItem.push(itemId[1]);
+      }
+    }
+
+    objectOfCaRegex = /return=(\d+)';">RENDRE/g;
+    while((itemId = objectOfCaRegex.exec(source)) !== null) {
       borrowedCaItem.push(itemId[1]);
     }
 
@@ -925,8 +928,9 @@ var getSource = function(page, doNotCheckForAccessKey) {
     if(currentAccessKeyRes !== null) {
       currentAccessKey = currentAccessKeyRes[1];
     } else {
-      updateMessage('Couldn\'t retrieve the accesskey from page: ', 1);
-      updateMessage(response, 1);
+      updateMessage('Couldn\'t retrieve the accesskey from page: ', 1).then(function() {
+        updateMessage(response, 1);
+      });
     }
   }
 
@@ -1002,9 +1006,10 @@ var _loadPageVerification = function(method, url, data, onLoad, loadedPage) {
     setTimeout(loadPage.bind(null, 'POST', CONNECTION_PAGE_URL, connectionData, loadPage.bind(null, method, url, data, onLoad)), getRandomTimeoutTimer(1800));
     return;
   } else if(failedToLoadThePage/* && ++currentPageLoadFailed < MAX_PAGE_LOAD_FAIL*/) {
-    updateMessage('Une maj du jeu est en cours');
-    updateMessage(getSource(loadedPage, 1), 1);
-    setTimeout(loadPage.bind(null, method, url, data, onLoad), getRandomTimeoutTimer(5));
+    updateMessage('Une maj du jeu est en cours').then(function() {
+      updateMessage(getSource(loadedPage, 1), 1);
+      setTimeout(loadPage.bind(null, method, url, data, onLoad), getRandomTimeoutTimer(5));
+    });
     return;
   /*} else if (failedToLoadThePage) {
     updateMessage('Chargement de la page impossible');
@@ -1178,7 +1183,7 @@ var resetCurrentStuffLoadFail = function() {
 };
 
 var returnBorrowedCaItem = function(callback, source) {
-  getBorrowedCaItem().then(function(borrowedCaItem) {
+  getBorrowedCaItem(source).then(function(borrowedCaItem) {
     if(borrowedCaItem.length > 0) {
       var returnBorrowedCaItemParam = '';
 
@@ -1226,7 +1231,7 @@ var _updateStuffVerification = function(callback, page) {
     updateMessage('Stuff équipé');
     resetCurrentStuffLoadFail();
 
-    getBorrowedCaItem().then(function(borrowedCaItem) {
+    getBorrowedCaItem(source).then(function(borrowedCaItem) {
       if(borrowedCaItem.length > 0) {
         returnBorrowedCaItem(callback, source);
         return;
@@ -1254,7 +1259,7 @@ var _updateStuffVerification = function(callback, page) {
       questRunning = false;
     }
 
-    getBorrowedCaItem().then(function(borrowedCaItem) {
+    getBorrowedCaItem(source).then(function(borrowedCaItem) {
       if(borrowedCaItem.length > 0) {
         returnBorrowedCaItem(updateMode, source);
         return;
@@ -1287,7 +1292,7 @@ var _updateStuffVerification = function(callback, page) {
         questRunning = false;
       }
 
-      getBorrowedCaItem().then(function(borrowedCaItem) {
+      getBorrowedCaItem(source).then(function(borrowedCaItem) {
         if(borrowedCaItem.length > 0) {
           returnBorrowedCaItem(updateMode, source);
           return;
@@ -1320,7 +1325,7 @@ var syncXmlRequest = function(d) {
       reject("XHR handler is missing");
     }
   });
-};
+}
 
 var updateMode = function(page) {
   if(cleanupRunning) {
@@ -2127,7 +2132,7 @@ var updateMessage = function(newText, doNotDisplay) {
 
   //log the message first
   var logs;
-  GM.getValue(SERV + '_bwAtkAndQuest_log').then(function(raw_logs) {  
+  return GM.getValue(SERV + '_bwAtkAndQuest_log').then(function(raw_logs) {
     if(raw_logs) {
       logs = JSON.parse(raw_logs);
     } else {
