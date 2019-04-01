@@ -1,4 +1,4 @@
-﻿// ==UserScript==
+// ==UserScript==
 // @name        BloodWars atk and quest
 // @namespace   atkAndQuest@bw
 // @include     http://r*.fr.bloodwars.net*
@@ -15,15 +15,15 @@ const __GM3REQUEST = (('undefined' !== typeof GM_xmlhttpRequest) ? GM_xmlhttpReq
 const __GM4REQUEST = (('undefined' !== typeof GM)                ? GM.xmlHttpRequest : undefined);  // GM 4.0+
 const __CHECKFUN   = (fun => (('function' === typeof fun) ? fun : undefined));
 
-const __XMLREQUEST = (__CHECKFUN(__GM4REQUEST) || __CHECKFUN(__GM4REQUEST));
+const __XMLREQUEST = (__CHECKFUN(__GM4REQUEST) || __CHECKFUN(__GM3REQUEST));
 
-//var ME = /class="me".*?>(.*?)</.exec(document.body.innerHTML)[1];
-var SERV = /r(\d+)\.fr/.exec(window.location.href)[1];
+var ME = /class="me".*?>(.*?)</.exec(document.body.innerHTML)[1];
+var SERV = '20' + (/r(\d+)\.fr/.exec(window.location.href)[1]);
+var SERV_AND_ME_LABEL = SERV + "_" + ME
 var BASE_URL = /^(.*\.net)/.exec(window.location.href)[1];
 var ATK_PAGE_URL = BASE_URL + '/?a=ambush&opt=atk';
 var ARMOURY_PAGE_URL = BASE_URL + '/?a=equip';
 var ARMOURY_ITEMS_FIRST_PAGE_URL = BASE_URL + '/_ajaxLoadArmoryItems.php?type=equip&page=1';
-var ARMOURY_ITEMS_SECOND_PAGE_URL = BASE_URL + '/_ajaxLoadArmoryItems.php?type=equip&page=2';
 var AUCTION_PAGE_URL = BASE_URL + '/?a=auction&do=itemlist';
 var CLAN_PAGE_URL = BASE_URL + '/?a=aliance';
 var EXPE_PAGE_URL = BASE_URL + '/?a=cevent';
@@ -63,13 +63,12 @@ var HOUR_IN_S = 3600;
 var INTERVAL_AUCTION_CHECK_TIME = 90 * MINUTE_IN_S * SECONDS_IN_MS;
 var DAY_IN_S = 24 * HOUR_IN_S;
 var MIN_INTERVAL_BETWEEN_ARENA_CHECK = 6 * HOUR_IN_S * SECONDS_IN_MS;
-var MIN_INTERVAL_BETWEEN_DECONNECTED_DESTUFF_CHECK = 15 * MINUTE_IN_S * SECONDS_IN_MS;
-var MIN_INTERVAL_BETWEEN_EVENT_CHECK = 150 * SECONDS_IN_MS;
+var MIN_INTERVAL_BETWEEN_EVENT_CHECK = 90 * SECONDS_IN_MS;
 var MARGIN_COEF = 1025;
 var DECIMAL_BASE = 10;
 
 var ARK_MAP = {
-  'Masque d`Adonis': 1,
+  'Masque d’Adonis': 1,
   'Masque de Caligula': 2,
   'Frénésie Sauvage': 3,
   'Peau de Bête': 4,
@@ -78,12 +77,12 @@ var ARK_MAP = {
   'Silence du Sang': 7,
   'Absorption de la Force': 8,
   'La Majesté': 9,
-  'L`Ombre de la Bête': 10,
-  'L`Ardeur du Sang': 11,
+  'L’Ombre de la Bête': 10,
+  'L’Ardeur du Sang': 11,
   'Le pouvoir du Sang': 12,
   'Le Chasseur de la Nuit': 13,
   'Le Souffle Mortel': 14,
-  'L`Horreur': 15
+  'L’Horreur': 15
 };
 var EVO_MAP = {
   'Les Ailes': 1,
@@ -96,7 +95,8 @@ var EVO_MAP = {
   'Sixième sens': 10,
   'Absorption': 11,
   'Développement Harmonieux': 12,
-  'L`empreinte du démon': 21
+  'L’empreinte du démon': 21,
+  'Muscles renforcés': 22
 };
 var OUU_LIST = [
   {
@@ -115,14 +115,14 @@ var OUU_LIST = [
 var EXPE_SITE = {
   'La Tour Blanche': 1,
   'Le Désert De La Désespérance': 2,
-  'Le Désert D`Efermeh': 3,
-  'L`Oasis Des Geysers': 4,
+  'Le Désert D’Efermeh': 3,
+  'L’Oasis Des Geysers': 4,
   'La Grande Steppe': 5,
-  'La Tour D`Or': 6,
+  'La Tour D’Or': 6,
   'Le Doigt Du Diable': 7,
-  'Le Désert D`Efermeh II': 8,
+  'Le Désert D’Efermeh II': 8,
   'Les Marécages Lapidaires': 9,
-  'L`Abîme Des Araignées': 10,
+  'L’Abîme Des Araignées': 10,
   'La Grande Steppe II': 11,
   'Les Monts De La Sagesse': 12,
   'Le Désert Des Carapaces': 13,
@@ -133,26 +133,28 @@ var EXPE_SITE = {
   'Champs de lave': 21,
   'Les Canaux': 22,
   'Salle de tortures': 23,
-  'Voie d`assassins': 24,
-  'L`artefact mystérieux': 25,
+  'Voie d’assassins': 24,
+  'L’artefact mystérieux': 25,
   'Nid de bestioles': 26,
   'Grande déchiqueteuse': 27,
   'Le cimetière des impies': 28,
-  'L`arbre des sentences': 29,
+  'L’arbre des sentences': 29,
   'Lac des noyés': 30,
   'La bibliothèque brulée': 31,
   'Obélisque': 32,
   'La salle des polymorphes': 33,
   'Terre pustulée': 34,
-  'La fierté des défenseurs': 35
+  'La fierté des défenseurs': 35,
+  'Le dernier bastion': 36,
+  'Le portail': 37
 };
 var RDC_SITE = {
   'Banlieues': 1,
-  'La Forteresse de l`Horace': 2,
+  'La Forteresse de l’Horace': 2,
   'Petite porte': 3,
   'La Forgerie': 4,
   'Le Marché': 5,
-  'L`Hôpital': 6,
+  'L’Hôpital': 6,
   'Le Stock du carburant': 7,
   'La Citadelle': 8
 };
@@ -184,7 +186,6 @@ var MAX_PAGE_LOAD_FAIL = 10;
 var lastExpeCheckTime = -1;
 var lastSwrCheckTime = -1;
 var lastArenaCheckTime = -1;
-var lastDestuffDeconnectedCheckTime = -1;
 var nextExpeTime = null;
 var nextExpeLocations = [];
 var nextSwrTime = null;
@@ -214,500 +215,89 @@ var questMessages = [
 
 //******************* User settings - Targets, stuff and arcanes *******************
 
-//*** Special settings ***
-var CLAN_ARMOURY_SHELF_UT1 = -1;
-var CLAN_ARMOURY_SHELF_UT2 = 9;
-var CLAN_ARMOURY_SHELF_UT3 = 9;
-var CLAN_ARMOURY_SHELF_MORIA = -1;
-
-var MY_ID_UT1 = -1;
-var MY_ID_UT2 = -1;
-var MY_ID_UT3 = -1;
-var MY_ID_MORIA = -1;
-
-var MY_CREDENTIALS_UT1 = {};
-var MY_CREDENTIALS_UT2 = {};
-var MY_CREDENTIALS_UT3 = {};
-var MY_CREDENTIALS_MORIA = {};
-
-//*** Auction ***
-var JUNK_AUCTION_PRICE_UT1 = -1;
-var JUNK_AUCTION_PRICE_UT2 = -1;
-var JUNK_AUCTION_PRICE_UT3 = -1;
-var JUNK_AUCTION_PRICE_MORIA = -1;
-
-var ITEMS_TO_BUY_UT1 = [];
-var ITEMS_TO_BUY_UT2 = [];
-var ITEMS_TO_BUY_UT3 = [];
-var ITEMS_TO_BUY_MORIA = [];
-
-//*** EXPE ***
-var DEFAULT_EXPE_STUFF_UT1 = -1;
-var DEFAULT_EXPE_STUFF_UT2 = -1;
-var DEFAULT_EXPE_STUFF_UT3 = -1;
-var DEFAULT_EXPE_STUFF_MORIA = -1;
-
-var EXPE_STUFF_FOR_LOCATION_UT1 = {};
-var EXPE_STUFF_FOR_LOCATION_UT2 = {};
-var EXPE_STUFF_FOR_LOCATION_UT3 = {};
-var EXPE_STUFF_FOR_LOCATION_MORIA = {};
-
-var DEFAULT_STUFF_TO_JOIN_EXPE_UT1 = -1;
-var DEFAULT_STUFF_TO_JOIN_EXPE_UT2 = -1;
-var DEFAULT_STUFF_TO_JOIN_EXPE_UT3 = -1;
-var DEFAULT_STUFF_TO_JOIN_EXPE_MORIA = -1;
-
-var EXPE_STUFF_TO_JOIN_LOCATION_UT1 = {};
-var EXPE_STUFF_TO_JOIN_LOCATION_UT2 = {};
-var EXPE_STUFF_TO_JOIN_LOCATION_UT3 = {};
-var EXPE_STUFF_TO_JOIN_LOCATION_MORIA = {};
-
-var DEFAULT_ARK_EVO_TO_JOIN_EXPO_UT1 = [];
-var DEFAULT_ARK_EVO_TO_JOIN_EXPO_UT2 = [];
-var DEFAULT_ARK_EVO_TO_JOIN_EXPO_UT3 = [];
-var DEFAULT_ARK_EVO_TO_JOIN_EXPO_MORIA = [];
-
-var EXPE_ARK_EVO_TO_JOIN_LOCATION_UT1 = {};
-var EXPE_ARK_EVO_TO_JOIN_LOCATION_UT2 = {};
-var EXPE_ARK_EVO_TO_JOIN_LOCATION_UT3 = {};
-var EXPE_ARK_EVO_TO_JOIN_LOCATION_MORIA = {};
-
-var OUU_TO_LAUNCH_EXPO_UT1 = 0;
-var OUU_TO_LAUNCH_EXPO_UT2 = 0;
-var OUU_TO_LAUNCH_EXPO_UT3 = 0;
-var OUU_TO_LAUNCH_EXPO_MORIA = 0;
-
-var NON_SAMA_EXPO_TO_JOIN_UT1 = {};
-var NON_SAMA_EXPO_TO_JOIN_UT2 = {};
-var NON_SAMA_EXPO_TO_JOIN_UT3 = {};
-var NON_SAMA_EXPO_TO_JOIN_MORIA = {};
-
-var EXPE_TO_LAUNCH_UT1 = {};
-var EXPE_TO_LAUNCH_UT2 = {};
-var EXPE_TO_LAUNCH_UT3 = {};
-var EXPE_TO_LAUNCH_MORIA = {};
-
-//*** RDC ***
-var RDC_STUFF_UT1 = -1;
-var RDC_STUFF_UT2 = -1;
-var RDC_STUFF_UT3 = -1;
-var RDC_STUFF_MORIA = -1;
-
-var STUFF_TO_JOIN_RDC_UT1 = -1;
-var STUFF_TO_JOIN_RDC_UT2 = -1;
-var STUFF_TO_JOIN_RDC_UT3 = -1;
-var STUFF_TO_JOIN_RDC_MORIA = -1;
-
-var ARK_EVO_TO_JOIN_RDC_UT1 = [];
-var ARK_EVO_TO_JOIN_RDC_UT2 = [];
-var ARK_EVO_TO_JOIN_RDC_UT3 = [];
-var ARK_EVO_TO_JOIN_RDC_MORIA = [];
-
-var RDC_TO_LAUNCH_UT1 = {};
-var RDC_TO_LAUNCH_UT2 = {};
-var RDC_TO_LAUNCH_UT3 = {};
-var RDC_TO_LAUNCH_MORIA = {};
-
-//*** ARENA 1 VS 1 ***
-var ARENA_1_V_1_STUFF_UT1 = -1;
-var ARENA_1_V_1_STUFF_UT2 = -1;
-var ARENA_1_V_1_STUFF_UT3 = -1;
-var ARENA_1_V_1_STUFF_MORIA = -1;
-
-var ARENA_1_V_1_ARK_EVO_UT1 = [];
-var ARENA_1_V_1_ARK_EVO_UT2 = [];
-var ARENA_1_V_1_ARK_EVO_UT3 = [];
-var ARENA_1_V_1_ARK_EVO_MORIA = [];
-
-var ARENA_1_V_1_OUU_UT1 = -1;
-var ARENA_1_V_1_OUU_UT2 = -1;
-var ARENA_1_V_1_OUU_UT3 = -1;
-var ARENA_1_V_1_OUU_MORIA = -1;
-
-//*** ARENA 3 VS 3 ***
-var ARENA_3_V_3_STUFF_UT1 = -1;
-var ARENA_3_V_3_STUFF_UT2 = -1;
-var ARENA_3_V_3_STUFF_UT3 = -1;
-var ARENA_3_V_3_STUFF_MORIA = -1;
-
-var ARENA_3_V_3_TO_LAUNCH_UT1 = {};
-var ARENA_3_V_3_TO_LAUNCH_UT2 = {};
-var ARENA_3_V_3_TO_LAUNCH_UT3 = {};
-var ARENA_3_V_3_TO_LAUNCH_MORIA = {};
-
-var STUFF_TO_JOIN_3_V_3_ARENA_UT1 = -1;
-var STUFF_TO_JOIN_3_V_3_ARENA_UT2 = -1;
-var STUFF_TO_JOIN_3_V_3_ARENA_UT3 = -1;
-var STUFF_TO_JOIN_3_V_3_ARENA_MORIA = -1;
-
-var ARK_EVO_TO_JOIN_3_V_3_ARENA_UT1 = [];
-var ARK_EVO_TO_JOIN_3_V_3_ARENA_UT2 = [];
-var ARK_EVO_TO_JOIN_3_V_3_ARENA_UT3 = [];
-var ARK_EVO_TO_JOIN_3_V_3_ARENA_MORIA = [];
-
-var ARENA_3_V_3_OUU_UT1 = -1;
-var ARENA_3_V_3_OUU_UT2 = -1;
-var ARENA_3_V_3_OUU_UT3 = -1;
-var ARENA_3_V_3_OUU_MORIA = -1;
-
-//*** ARENA CLAN VS CLAN ***
-var ARENA_CLAN_V_CLAN_STUFF_UT1 = -1;
-var ARENA_CLAN_V_CLAN_STUFF_UT2 = -1;
-var ARENA_CLAN_V_CLAN_STUFF_UT3 = -1;
-var ARENA_CLAN_V_CLAN_STUFF_MORIA = -1;
-
-var STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_UT1 = -1;
-var STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_UT2 = -1;
-var STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_UT3 = -1;
-var STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_MORIA = -1;
-
-var ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_UT1 = [];
-var ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_UT2 = [];
-var ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_UT3 = [];
-var ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_MORIA = [];
-
-var ARENA_CLAN_V_CLAN_OUU_UT1 = -1;
-var ARENA_CLAN_V_CLAN_OUU_UT2 = -1;
-var ARENA_CLAN_V_CLAN_OUU_UT3 = -1;
-var ARENA_CLAN_V_CLAN_OUU_MORIA = -1;
-
-//*** QUEST ***
-var QUEST_STUFF_UT1 = -1;
-var QUEST_STUFF_UT2 = -1;
-var QUEST_STUFF_UT3 = -1;
-var QUEST_STUFF_MORIA = -1;
-
-var QUEST_ARK_EVO_UT1 = [];
-var QUEST_ARK_EVO_UT2 = [];
-var QUEST_ARK_EVO_UT3 = [];
-var QUEST_ARK_EVO_MORIA = [];
-
-//*** ATK ***
-var RANDOMLY_SORT_TARGET_UT1 = false;
-var RANDOMLY_SORT_TARGET_UT2 = false;
-var RANDOMLY_SORT_TARGET_UT3 = false;
-var RANDOMLY_SORT_TARGET_MORIA = false;
-
-var AVAILABLE_ATK_TARGET_UT1 = [];
-var AVAILABLE_ATK_TARGET_UT2 = [];
-var AVAILABLE_ATK_TARGET_UT3 = [];
-var AVAILABLE_ATK_TARGET_MORIA = [];
-
-var DEFAULT_ATK_STUFF_UT1 = -1;
-var DEFAULT_ATK_STUFF_UT2 = -1;
-var DEFAULT_ATK_STUFF_UT3 = -1;
-var DEFAULT_ATK_STUFF_MORIA = -1;
-
-var DEFAULT_ATK_ARK_EVO_UT1 = [];
-var DEFAULT_ATK_ARK_EVO_UT2 = [];
-var DEFAULT_ATK_ARK_EVO_UT3 = [];
-var DEFAULT_ATK_ARK_EVO_MORIA = [];
-
-//*** DEF ***
-var DEF_STUFF_UT1 = -1;
-var DEF_STUFF_UT2 = -1;
-var DEF_STUFF_UT3 = -1;
-var DEF_STUFF_MORIA = -1;
+var ACCOUNTS_SETTINGS = {
+  201: {}, // UT1
+  202: {}, // UT2
+  203: {}, // Moria
+  204: {}  // UT3
+}
 
 //******************* Manage user settings - DO NOT TOUCH *******************
 
+var ACCOUNT_SETTINGS = ACCOUNTS_SETTINGS[SERV][ME]
+
 //*** Special settings ***
-var CLAN_ARMOURY_SHELF_FOR_SERV = {
-  1: CLAN_ARMOURY_SHELF_UT1,
-  2: CLAN_ARMOURY_SHELF_UT2,
-  3: CLAN_ARMOURY_SHELF_MORIA,
-  4: CLAN_ARMOURY_SHELF_UT3
+var BLACKLIST = ACCOUNT_SETTINGS.blacklist || [];
+var DO_NOT_JOIN_AS_SAMA = ACCOUNT_SETTINGS.doNotJoinAsSama || false;
+var CLAN_ARMOURY_SHELF = ACCOUNT_SETTINGS.clanArmouryShelf || -1;
+var MY_ID = ACCOUNT_SETTINGS.id;
+var MY_CREDENTIALS = {
+  login: ACCOUNT_SETTINGS.login,
+  password: ACCOUNT_SETTINGS.password,
+  realm: SERV
 };
-
-var CLAN_ARMOURY_SHELF = CLAN_ARMOURY_SHELF_FOR_SERV[SERV];
-
-var MY_ID_FOR_SERV = {
-  1: MY_ID_UT1,
-  2: MY_ID_UT2,
-  3: MY_ID_MORIA,
-  4: MY_ID_UT3
-};
-
-var MY_ID = MY_ID_FOR_SERV[SERV];
-
-var MY_CREDENTIALS_FOR_SERV = {
-  1: MY_CREDENTIALS_UT1,
-  2: MY_CREDENTIALS_UT2,
-  3: MY_CREDENTIALS_MORIA,
-  4: MY_CREDENTIALS_UT3
-};
-
-var MY_CREDENTIALS = MY_CREDENTIALS_FOR_SERV[SERV];
 
 //*** Auction ***
-
-var JUNK_AUCTION_PRICE_FOR_SERV = {
-  1: JUNK_AUCTION_PRICE_UT1,
-  2: JUNK_AUCTION_PRICE_UT2,
-  3: JUNK_AUCTION_PRICE_MORIA,
-  4: JUNK_AUCTION_PRICE_UT3
-};
-var ITEMS_TO_BUY_FOR_SERV = {
-  1: ITEMS_TO_BUY_UT1,
-  2: ITEMS_TO_BUY_UT2,
-  3: ITEMS_TO_BUY_MORIA,
-  4: ITEMS_TO_BUY_UT3
-};
-
-
-var JUNK_AUCTION_PRICE = JUNK_AUCTION_PRICE_FOR_SERV[SERV];
-var ITEMS_TO_BUY = ITEMS_TO_BUY_FOR_SERV[SERV];
-
+var JUNK_AUCTION_PRICE = ACCOUNT_SETTINGS.junkAuctionPrice || -1;
+var ITEMS_TO_BUY = ACCOUNT_SETTINGS.itemsToBuy || [];
 
 //*** EXPE ***
-var DEFAULT_EXPE_STUFF_FOR_SERV = {
-  1: DEFAULT_EXPE_STUFF_UT1,
-  2: DEFAULT_EXPE_STUFF_UT2,
-  3: DEFAULT_EXPE_STUFF_MORIA,
-  4: DEFAULT_EXPE_STUFF_UT3
-};
-var EXPE_STUFF_FOR_LOCATION_FOR_SERV = {
-  1: EXPE_STUFF_FOR_LOCATION_UT1,
-  2: EXPE_STUFF_FOR_LOCATION_UT2,
-  3: EXPE_STUFF_FOR_LOCATION_MORIA,
-  4: EXPE_STUFF_FOR_LOCATION_UT3
-};
-var DEFAULT_STUFF_TO_JOIN_EXPE_SERV = {
-  1: DEFAULT_STUFF_TO_JOIN_EXPE_UT1,
-  2: DEFAULT_STUFF_TO_JOIN_EXPE_UT2,
-  3: DEFAULT_STUFF_TO_JOIN_EXPE_MORIA,
-  4: DEFAULT_STUFF_TO_JOIN_EXPE_UT3
-};
-var EXPE_STUFF_TO_JOIN_LOCATION_SERV = {
-  1: EXPE_STUFF_TO_JOIN_LOCATION_UT1,
-  2: EXPE_STUFF_TO_JOIN_LOCATION_UT2,
-  3: EXPE_STUFF_TO_JOIN_LOCATION_MORIA,
-  4: EXPE_STUFF_TO_JOIN_LOCATION_UT3
-};
-var DEFAULT_ARK_EVO_TO_JOIN_EXPO_SERV = {
-  1: DEFAULT_ARK_EVO_TO_JOIN_EXPO_UT1,
-  2: DEFAULT_ARK_EVO_TO_JOIN_EXPO_UT2,
-  3: DEFAULT_ARK_EVO_TO_JOIN_EXPO_MORIA,
-  4: DEFAULT_ARK_EVO_TO_JOIN_EXPO_UT3
-};
-var EXPE_ARK_EVO_TO_JOIN_LOCATION_SERV = {
-  1: EXPE_ARK_EVO_TO_JOIN_LOCATION_UT1,
-  2: EXPE_ARK_EVO_TO_JOIN_LOCATION_UT2,
-  3: EXPE_ARK_EVO_TO_JOIN_LOCATION_MORIA,
-  4: EXPE_ARK_EVO_TO_JOIN_LOCATION_UT3
-};
-var OUU_TO_LAUNCH_EXPO_SERV = {
-  1: OUU_TO_LAUNCH_EXPO_UT1,
-  2: OUU_TO_LAUNCH_EXPO_UT2,
-  3: OUU_TO_LAUNCH_EXPO_MORIA,
-  4: OUU_TO_LAUNCH_EXPO_UT3
-};
-var NON_SAMA_EXPO_TO_JOIN_SERV = {
-  1: NON_SAMA_EXPO_TO_JOIN_UT1,
-  2: NON_SAMA_EXPO_TO_JOIN_UT2,
-  3: NON_SAMA_EXPO_TO_JOIN_MORIA,
-  4: NON_SAMA_EXPO_TO_JOIN_UT3
-};
-var EXPE_TO_LAUNCH_SERV = {
-  1: EXPE_TO_LAUNCH_UT1,
-  2: EXPE_TO_LAUNCH_UT2,
-  3: EXPE_TO_LAUNCH_MORIA,
-  4: EXPE_TO_LAUNCH_UT3
-};
-
-var DEFAULT_EXPE_STUFF = DEFAULT_EXPE_STUFF_FOR_SERV[SERV];
-var EXPE_STUFF_FOR_LOCATION = EXPE_STUFF_FOR_LOCATION_FOR_SERV[SERV];
-var DEFAULT_STUFF_TO_JOIN_EXPE = DEFAULT_STUFF_TO_JOIN_EXPE_SERV[SERV];
-var EXPE_STUFF_TO_JOIN_LOCATION = EXPE_STUFF_TO_JOIN_LOCATION_SERV[SERV];
-var DEFAULT_ARK_EVO_TO_JOIN_EXPO = DEFAULT_ARK_EVO_TO_JOIN_EXPO_SERV[SERV];
-var EXPE_ARK_EVO_TO_JOIN_LOCATION = EXPE_ARK_EVO_TO_JOIN_LOCATION_SERV[SERV];
-var OUU_TO_LAUNCH_EXPO = OUU_TO_LAUNCH_EXPO_SERV[SERV];
-var NON_SAMA_EXPO_TO_JOIN = NON_SAMA_EXPO_TO_JOIN_SERV[SERV];
-var EXPE_TO_LAUNCH = EXPE_TO_LAUNCH_SERV[SERV];
+var DEFAULT_EXPE_STUFF = ACCOUNT_SETTINGS.defaultStuffForExpe;
+var EXPE_STUFF_FOR_LOCATION = ACCOUNT_SETTINGS.stuffForExpeLocation || [];
+var DEFAULT_ARK_EVO_TO_JOIN_EXPO = ACCOUNT_SETTINGS.defaultArkEvoForExpe;
+var EXPE_ARK_EVO_TO_JOIN_LOCATION = ACCOUNT_SETTINGS.arkEvoForExpeLocation || [];
+var NON_SAMA_EXPO_TO_JOIN = ACCOUNT_SETTINGS.nonSamaExpe;
+var EXPE_TO_LAUNCH = ACCOUNT_SETTINGS.expeToLaunch;
+var DEFAULT_STUFF_TO_JOIN_EXPE = ACCOUNT_SETTINGS.defaultChamaStuffForExpe;
+var EXPE_STUFF_TO_JOIN_LOCATION = ACCOUNT_SETTINGS.chamaStuffForExpeLocation || [];
+var OUU_TO_LAUNCH_EXPO = ACCOUNT_SETTINGS.ouuForLaunchedExpe || 0;
 EXPE_TO_LAUNCH.eventJoinPageUrl = EXPE_JOIN_PAGE_URL;
 EXPE_TO_LAUNCH.eventClosePageUrl = EXPE_CLOSE_PAGE_URL;
 EXPE_TO_LAUNCH.eventUpdateDescUrl = EXPE_UPDATE_DESC_URL;
 EXPE_TO_LAUNCH.actionType = 'cevent';
 
 //*** RDC ***
-var RDC_STUFF_FOR_SERV = {
-  1: RDC_STUFF_UT1,
-  2: RDC_STUFF_UT2,
-  3: RDC_STUFF_MORIA,
-  4: RDC_STUFF_UT3
-};
-var STUFF_TO_JOIN_RDC_FOR_SERV = {
-  1: STUFF_TO_JOIN_RDC_UT1,
-  2: STUFF_TO_JOIN_RDC_UT2,
-  3: STUFF_TO_JOIN_RDC_MORIA,
-  4: STUFF_TO_JOIN_RDC_UT3
-};
-var ARK_EVO_TO_JOIN_RDC_FOR_SERV = {
-  1: ARK_EVO_TO_JOIN_RDC_UT1,
-  2: ARK_EVO_TO_JOIN_RDC_UT2,
-  3: ARK_EVO_TO_JOIN_RDC_MORIA,
-  4: ARK_EVO_TO_JOIN_RDC_UT3
-};
-var RDC_TO_LAUNCH_FOR_SERV = {
-  1: RDC_TO_LAUNCH_UT1,
-  2: RDC_TO_LAUNCH_UT2,
-  3: RDC_TO_LAUNCH_MORIA,
-  4: RDC_TO_LAUNCH_UT3
-};
-
-var RDC_STUFF = RDC_STUFF_FOR_SERV[SERV];
-var STUFF_TO_JOIN_RDC = STUFF_TO_JOIN_RDC_FOR_SERV[SERV];
-var ARK_EVO_TO_JOIN_RDC = ARK_EVO_TO_JOIN_RDC_FOR_SERV[SERV];
-var RDC_TO_LAUNCH = RDC_TO_LAUNCH_FOR_SERV[SERV];
+var RDC_STUFF = ACCOUNT_SETTINGS.stuffForKoth;
+var ARK_EVO_TO_JOIN_RDC = ACCOUNT_SETTINGS.arkEvoForKoth;
+var NON_SAMA_KOTH_TO_JOIN = ACCOUNT_SETTINGS.nonSamaKoth;
+var RDC_TO_LAUNCH = ACCOUNT_SETTINGS.kothToLaunch;
+var STUFF_TO_JOIN_RDC = ACCOUNT_SETTINGS.chamaStuffForKoth;
 RDC_TO_LAUNCH.eventJoinPageUrl = SWR_JOIN_PAGE_URL;
 RDC_TO_LAUNCH.eventClosePageUrl = SWR_CLOSE_PAGE_URL;
 RDC_TO_LAUNCH.eventUpdateDescUrl = SWR_UPDATE_DESC_URL;
 RDC_TO_LAUNCH.actionType = 'swr';
 
 //*** ARENA 1 VS 1 ***
-var ARENA_1_V_1_STUFF_FOR_SERV = {
-  1: ARENA_1_V_1_STUFF_UT1,
-  2: ARENA_1_V_1_STUFF_UT2,
-  3: ARENA_1_V_1_STUFF_MORIA,
-  4: ARENA_1_V_1_STUFF_UT3
-};
-var ARENA_1_V_1_ARK_EVO_FOR_SERV = {
-  1: ARENA_1_V_1_ARK_EVO_UT1,
-  2: ARENA_1_V_1_ARK_EVO_UT2,
-  3: ARENA_1_V_1_ARK_EVO_MORIA,
-  4: ARENA_1_V_1_ARK_EVO_UT3
-};
-var ARENA_1_V_1_OUU_FOR_SERV = {
-  1: ARENA_1_V_1_OUU_UT1,
-  2: ARENA_1_V_1_OUU_UT2,
-  3: ARENA_1_V_1_OUU_MORIA,
-  4: ARENA_1_V_1_OUU_UT3
-};
-
-var ARENA_1_V_1_STUFF = ARENA_1_V_1_STUFF_FOR_SERV[SERV];
-var ARENA_1_V_1_ARK_EVO = ARENA_1_V_1_ARK_EVO_FOR_SERV[SERV];
-var ARENA_1_V_1_OUU = ARENA_1_V_1_OUU_FOR_SERV[SERV];
+var ARENA_1_V_1_STUFF = ACCOUNT_SETTINGS.stuffFor1v1Arena;
+var ARENA_1_V_1_ARK_EVO = ACCOUNT_SETTINGS.arkEvoFor1v1Arena;
+var ARENA_1_V_1_OUU = ACCOUNT_SETTINGS.ouuFor1v1Arena;
 
 //*** ARENA 3 VS 3 ***
-var ARENA_3_V_3_STUFF_FOR_SERV = {
-  1: ARENA_3_V_3_STUFF_UT1,
-  2: ARENA_3_V_3_STUFF_UT2,
-  3: ARENA_3_V_3_STUFF_MORIA,
-  4: ARENA_3_V_3_STUFF_UT3
-};
-var ARENA_3_V_3_TO_LAUNCH_FOR_SERV = {
-  1: ARENA_3_V_3_TO_LAUNCH_UT1,
-  2: ARENA_3_V_3_TO_LAUNCH_UT2,
-  3: ARENA_3_V_3_TO_LAUNCH_MORIA,
-  4: ARENA_3_V_3_TO_LAUNCH_UT3
-};
-var STUFF_TO_JOIN_3_V_3_ARENA_FOR_SERV = {
-  1: STUFF_TO_JOIN_3_V_3_ARENA_UT1,
-  2: STUFF_TO_JOIN_3_V_3_ARENA_UT2,
-  3: STUFF_TO_JOIN_3_V_3_ARENA_MORIA,
-  4: STUFF_TO_JOIN_3_V_3_ARENA_UT3
-};
-var ARK_EVO_TO_JOIN_3_V_3_ARENA_FOR_SERV = {
-  1: ARK_EVO_TO_JOIN_3_V_3_ARENA_UT1,
-  2: ARK_EVO_TO_JOIN_3_V_3_ARENA_UT2,
-  3: ARK_EVO_TO_JOIN_3_V_3_ARENA_MORIA,
-  4: ARK_EVO_TO_JOIN_3_V_3_ARENA_UT3
-};
-var ARENA_3_V_3_OUU_FOR_SERV = {
-  1: ARENA_3_V_3_OUU_UT1,
-  2: ARENA_3_V_3_OUU_UT2,
-  3: ARENA_3_V_3_OUU_MORIA,
-  4: ARENA_3_V_3_OUU_UT3
-};
-
-var ARENA_3_V_3_STUFF = ARENA_3_V_3_STUFF_FOR_SERV[SERV];
-var ARENA_3_V_3_TO_LAUNCH = ARENA_3_V_3_TO_LAUNCH_FOR_SERV[SERV];
-var STUFF_TO_JOIN_3_V_3_ARENA = STUFF_TO_JOIN_3_V_3_ARENA_FOR_SERV[SERV];
-var ARK_EVO_TO_JOIN_3_V_3_ARENA = ARK_EVO_TO_JOIN_3_V_3_ARENA_FOR_SERV[SERV];
-var ARENA_3_V_3_OUU = ARENA_3_V_3_OUU_FOR_SERV[SERV];
+var ARENA_3_V_3_STUFF = ACCOUNT_SETTINGS.stuffFor3v3Arena;
+var ARK_EVO_TO_JOIN_3_V_3_ARENA = ACCOUNT_SETTINGS.arkEvoFor3v3Arena;
+var ARENA_3_V_3_TO_LAUNCH = ACCOUNT_SETTINGS['3v3ArenaToLaunch'];
+var STUFF_TO_JOIN_3_V_3_ARENA = ACCOUNT_SETTINGS.chamaStuffFor3v3Arena;
+var ARENA_3_V_3_OUU = ACCOUNT_SETTINGS.ouuFor3v3Arena;
 ARENA_3_V_3_TO_LAUNCH.eventJoinPageUrl = ARENA_3_V_3_JOIN_PAGE_URL;
 ARENA_3_V_3_TO_LAUNCH.eventClosePageUrl = ARENA_3_V_3_CLOSE_PAGE_URL;
 ARENA_3_V_3_TO_LAUNCH.eventUpdateDescUrl = ARENA_3_V_3_UPDATE_DESC_URL;
 ARENA_3_V_3_TO_LAUNCH.actionType = 'newarena_team';
 
 //*** ARENA CLAN VS CLAN ***
-var ARENA_CLAN_V_CLAN_STUFF_FOR_SERV = {
-  1: ARENA_CLAN_V_CLAN_STUFF_UT1,
-  2: ARENA_CLAN_V_CLAN_STUFF_UT2,
-  3: ARENA_CLAN_V_CLAN_STUFF_MORIA,
-  4: ARENA_CLAN_V_CLAN_STUFF_UT3
-};
-var ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_FOR_SERV = {
-  1: ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_UT1,
-  2: ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_UT2,
-  3: ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_MORIA,
-  4: ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_UT3
-};
-var STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_FOR_SERV = {
-  1: STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_UT1,
-  2: STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_UT2,
-  3: STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_MORIA,
-  4: STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_UT3
-};
-var ARENA_CLAN_V_CLAN_OUU_FOR_SERV = {
-  1: ARENA_CLAN_V_CLAN_OUU_UT1,
-  2: ARENA_CLAN_V_CLAN_OUU_UT2,
-  3: ARENA_CLAN_V_CLAN_OUU_MORIA,
-  4: ARENA_CLAN_V_CLAN_OUU_UT3
-};
-
-var ARENA_CLAN_V_CLAN_STUFF = ARENA_CLAN_V_CLAN_STUFF_FOR_SERV[SERV];
-var ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA = ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA_FOR_SERV[SERV];
-var STUFF_TO_JOIN_CLAN_V_CLAN_ARENA = STUFF_TO_JOIN_CLAN_V_CLAN_ARENA_FOR_SERV[SERV];
-var ARENA_CLAN_V_CLAN_OUU = ARENA_CLAN_V_CLAN_OUU_FOR_SERV[SERV];
+var ARENA_CLAN_V_CLAN_STUFF = ACCOUNT_SETTINGS.stuffForClanvClanArena;
+var ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA = ACCOUNT_SETTINGS.arkEvoForClanvClanArena;
+var STUFF_TO_JOIN_CLAN_V_CLAN_ARENA = ACCOUNT_SETTINGS.chamaStuffForClanvClanArena;
+var ARENA_CLAN_V_CLAN_OUU = ACCOUNT_SETTINGS.ouuForClanvClanArena;
 
 //*** QUEST ***
-var QUEST_STUFF_FOR_SERV = {
-  1: QUEST_STUFF_UT1,
-  2: QUEST_STUFF_UT2,
-  3: QUEST_STUFF_MORIA,
-  4: QUEST_STUFF_UT3
-};
-var QUEST_ARK_EVO_FOR_SERV = {
-  1: QUEST_ARK_EVO_UT1,
-  2: QUEST_ARK_EVO_UT2,
-  3: QUEST_ARK_EVO_MORIA,
-  4: QUEST_ARK_EVO_UT3
-};
-
-var QUEST_STUFF = QUEST_STUFF_FOR_SERV[SERV];
-var QUEST_ARK_EVO = QUEST_ARK_EVO_FOR_SERV[SERV];
+var CAN_LAUNCH_QUEST = typeof ACCOUNT_SETTINGS.canLaunchQuest !== 'undefined' ? ACCOUNT_SETTINGS.canLaunchQuest : true;
+var QUEST_STUFF = ACCOUNT_SETTINGS.stuffForQuest;
+var QUEST_ARK_EVO = ACCOUNT_SETTINGS.arkEvoForQuest || [];
 
 //*** ATK ***
-var RANDOMLY_SORT_TARGET_FOR_SERV = {
-  1: RANDOMLY_SORT_TARGET_UT1,
-  2: RANDOMLY_SORT_TARGET_UT2,
-  3: RANDOMLY_SORT_TARGET_MORIA,
-  4: RANDOMLY_SORT_TARGET_UT3
-};
-var RANDOMLY_SORT_TARGET = RANDOMLY_SORT_TARGET_FOR_SERV[SERV];
-
-var AVAILABLE_ATK_ARK_TARGET_FOR_SERV = {
-  1: AVAILABLE_ATK_TARGET_UT1,
-  2: AVAILABLE_ATK_TARGET_UT2,
-  3: AVAILABLE_ATK_TARGET_MORIA,
-  4: AVAILABLE_ATK_TARGET_UT3
-};
-var DEFAULT_ATK_STUFF_FOR_SERV = {
-  1: DEFAULT_ATK_STUFF_UT1,
-  2: DEFAULT_ATK_STUFF_UT2,
-  3: DEFAULT_ATK_STUFF_MORIA,
-  4: DEFAULT_ATK_STUFF_UT3
-};
-var DEFAULT_ATK_ARK_EVO_FOR_SERV = {
-  1: DEFAULT_ATK_ARK_EVO_UT1,
-  2: DEFAULT_ATK_ARK_EVO_UT2,
-  3: DEFAULT_ATK_ARK_EVO_MORIA,
-  4: DEFAULT_ATK_ARK_EVO_UT3
-};
-
-var AVAILABLE_ATK_TARGET = AVAILABLE_ATK_ARK_TARGET_FOR_SERV[SERV];
-if(RANDOMLY_SORT_TARGET) {
+var CAN_LAUNCH_ATK = typeof ACCOUNT_SETTINGS.canLaunchAtk !== 'undefined' ? ACCOUNT_SETTINGS.canLaunchAtk : true;
+var AVAILABLE_ATK_TARGET = ACCOUNT_SETTINGS.availableAtkTarget;
+if(ACCOUNT_SETTINGS.randomlySortTarget) {
   var unsortedList = AVAILABLE_ATK_TARGET.slice();
   var sortedList = [];
   while(unsortedList.length > 0) {
@@ -717,18 +307,11 @@ if(RANDOMLY_SORT_TARGET) {
   AVAILABLE_ATK_TARGET = sortedList;
 }
 
-var DEFAULT_ATK_STUFF = DEFAULT_ATK_STUFF_FOR_SERV[SERV];
-var DEFAULT_ATK_ARK_EVO = DEFAULT_ATK_ARK_EVO_FOR_SERV[SERV];
+var DEFAULT_ATK_STUFF = ACCOUNT_SETTINGS.defaultStuffForAtk;
+var DEFAULT_ATK_ARK_EVO = ACCOUNT_SETTINGS.defaultArkEvoForAtk;
 
 //*** DEF ***
-var DEF_STUFF_FOR_SERV = {
-  1: DEF_STUFF_UT1,
-  2: DEF_STUFF_UT2,
-  3: DEF_STUFF_MORIA,
-  4: DEF_STUFF_UT3
-};
-
-var DEF_STUFF = DEF_STUFF_FOR_SERV[SERV];
+var DEF_STUFF = ACCOUNT_SETTINGS.defaultStuffForDef;
 
 //******************* Utils - DO NOT TOUCH *******************
 
@@ -784,7 +367,7 @@ var completeAllExpeToJoin = function(expePage, allEventToJoin) {
     var expeInfo = allEventToJoin[i];
 
     var startRegex = 'uid=(\\d+)"(?:.*?\\r?\\n)(?:.*?\\r?\\n)(?:.*?\\r?\\n)(?:.*?)onmouseout="nd\\(\\);">(?!\\S)';
-    var readLocation = '(?:(?:(?!expDesc_).)*?\\r?\\n)+?(.*?)<\\/td>';
+    var readLocation = '(?:(?:(?!expDesc_).)*?\\r?\\n)+?(.*?)<(?:\\/td|div)>';
     var readNumberOfPlayer = '(?:(?:(?!expDesc_).)*?\\r?\\n)+?.*onmouseout="nd\\(\\);"><b>(\\d+).*?</b>';
     var readDescription = '(?:(?:(?!expDesc_).)*?\\r?\\n)+?.*?<span id="expDesc_' + expeInfo.id + '".*?>(.*?)<\\/span>';
     var re = new RegExp(startRegex + readLocation + readNumberOfPlayer + readDescription);
@@ -797,29 +380,162 @@ var completeAllExpeToJoin = function(expePage, allEventToJoin) {
 
     var launcherId = expeInfoRead[1] | 0;
     var location = expeInfoRead[2].trim().replace(" (La Chasse)", "");
+    var difficulty = (expeInfoRead[0].match(/star\.png/g) || []).length;
     var numberOfPlayer = expeInfoRead[3] | 0;
     var maxNumberOfPlayer = null;
     var description = expeInfoRead[4].replace(/&.*?;/g, '').replace(/\d+\s*h(?:\s*\d+)?/g, '');
+    //var isExpeCut = /pas\s*cut(?:\s|$)/i.exec(description) === null && /non\s*cut(?:\s|$)/i.exec(description) === null && (/cut\s/i.exec(description) !== null || /\scut/i.exec(description) !== null);
+    //isExpeCut = false;
 
-    var numberRegex = /\d+/g;
-    var maxTry = 10;
-    while ((regexpResult = numberRegex.exec(description)) !== null && maxTry-- > 0) {
-      var number = regexpResult[0] | 0;
-      if(maxNumberOfPlayer === null || number > maxNumberOfPlayer) {
-        maxNumberOfPlayer = number;
+    //if(!isExpeCut) {
+      var numberRegex = /\d+/g;
+      var maxTry = 10;
+      while ((regexpResult = numberRegex.exec(description)) !== null && maxTry-- > 0) {
+        var number = regexpResult[0] | 0;
+        if(maxNumberOfPlayer === null || number > maxNumberOfPlayer) {
+          maxNumberOfPlayer = number;
+        }
+        if(maxTry === 0) {
+          updateMessage('Il y a eu un problème pour lire la description d\'expédition: ' + description);
+          maxNumberOfPlayer = numberOfPlayer;
+        }
       }
-      if(maxTry === 0) {
-        updateMessage('Il y a eu un problème pour lire la description d\'expédition: ' + description);
-        maxNumberOfPlayer = numberOfPlayer;
-      }
-    }
+    /*} else {
+      // Unable to manage possibly cut expe, so consider the expe is already full
+      var descHasNumber = /\d/.exec(description);
+      maxNumberOfPlayer = descHasNumber ? numberOfPlayer : null;
+    }*/
 
     expeInfo.launcherId = launcherId;
     expeInfo.location = location;
+    expeInfo.difficulty = difficulty;
     expeInfo.numberOfPlayer = numberOfPlayer;
     expeInfo.maxNumberOfPlayer = maxNumberOfPlayer;
     expeInfo.isCut = false;
   }
+};
+
+var configIsOkay = function() {
+  var res = true;
+  
+  if(!MY_ID) {
+    updateMessage('No account id specified');
+    res = false;
+  }
+  
+  if(!DEFAULT_EXPE_STUFF) {
+    updateMessage('No default expe stuff specified');
+    res = false;
+  }
+  if(!DEFAULT_ARK_EVO_TO_JOIN_EXPO) {
+    updateMessage('No default ark/evo for expedition specified');
+    res = false;
+  }
+  if(!NON_SAMA_EXPO_TO_JOIN) {
+    updateMessage('No non sama expedition specified');
+    res = false;
+  }
+  if(!EXPE_TO_LAUNCH) {
+    updateMessage('No expedition to launch specified');
+    res = false;
+  }
+  if(!DEFAULT_STUFF_TO_JOIN_EXPE) {
+    updateMessage('No default chama stuff for expedition specified');
+    res = false;
+  }
+
+  if(!RDC_STUFF) {
+    updateMessage('No koth stuff specified');
+    res = false;
+  }
+  if(!ARK_EVO_TO_JOIN_RDC) {
+    updateMessage('No ark/evo for koth specified');
+    res = false;
+  }
+  if(!RDC_TO_LAUNCH) {
+    updateMessage('No koth to launch specified');
+    res = false;
+  }
+  if(!STUFF_TO_JOIN_RDC) {
+    updateMessage('No chama stuff for koth specified');
+    res = false;
+  }
+
+  if(!ARENA_1_V_1_STUFF) {
+    updateMessage('No stuff for 1v1 arena specified');
+    res = false;
+  }
+  if(!ARENA_1_V_1_ARK_EVO) {
+    updateMessage('No ark/evo for 1v1 arena specified');
+    res = false;
+  }
+  if(!ARENA_1_V_1_OUU) {
+    updateMessage('No ouu for 1v1 arena specified');
+    res = false;
+  }
+
+  if(!ARENA_3_V_3_STUFF) {
+    updateMessage('No stuff for 3v3 arena specified');
+    res = false;
+  }
+  if(!ARK_EVO_TO_JOIN_3_V_3_ARENA) {
+    updateMessage('No ark/evo for 3v3 arena specified');
+    res = false;
+  }
+  if(!ARENA_3_V_3_TO_LAUNCH) {
+    updateMessage('No 3v3 arena to launch specified');
+    res = false;
+  }
+  if(!STUFF_TO_JOIN_3_V_3_ARENA) {
+    updateMessage('No chama stuff for 3v3 arena specified');
+    res = false;
+  }
+  if(!ARENA_3_V_3_OUU) {
+    updateMessage('No ouu for 3v3 arena specified');
+    res = false;
+  }
+
+  if(!ARENA_CLAN_V_CLAN_STUFF) {
+    updateMessage('No stuff for clan v clan arena specified');
+    res = false;
+  }
+  if(!ARK_EVO_TO_JOIN_CLAN_V_CLAN_ARENA) {
+    updateMessage('No ark/evo for clan v clan arena specified');
+    res = false;
+  }
+  if(!STUFF_TO_JOIN_CLAN_V_CLAN_ARENA) {
+    updateMessage('No chama stuff for clan v clan arena specified');
+    res = false;
+  }
+  if(!ARENA_CLAN_V_CLAN_OUU) {
+    updateMessage('No ouu for clan v clan arena specified');
+    res = false;
+  }
+
+  if(!QUEST_STUFF && CAN_LAUNCH_QUEST) {
+    updateMessage('No quest stuff specified');
+    res = false;
+  }
+
+  if(!AVAILABLE_ATK_TARGET && CAN_LAUNCH_ATK) {
+    updateMessage('No atk target specified');
+    res = false;
+  }
+  if(!DEFAULT_ATK_STUFF && CAN_LAUNCH_ATK) {
+    updateMessage('No default stuff for atk specified');
+    res = false;
+  }
+  if(!DEFAULT_ATK_ARK_EVO && CAN_LAUNCH_ATK) {
+    updateMessage('No ark/evo for ark specified');
+    res = false;
+  }
+
+  if(!DEF_STUFF) {
+    updateMessage('No def stuff specified');
+    res = false;
+  }
+
+  return res;
 };
 
 var getBorrowedCaItem = function(source) {
@@ -883,11 +599,11 @@ var getCurrentTimeInS = function(source) {
 var getExpeStuff = function() {
   var expeStuff = null;
   for(var location of nextExpeLocations) {
-    if(EXPE_STUFF_FOR_LOCATION.hasOwnProperty(location)) {
-      var tmpExpeStuff = EXPE_STUFF_FOR_LOCATION[location];
-
-      if(expeStuff === null || location === EXPE_TO_LAUNCH.location) {
-        expeStuff = tmpExpeStuff;
+    if(expeStuff === null || location === EXPE_TO_LAUNCH.location) {
+      if(EXPE_STUFF_FOR_LOCATION.hasOwnProperty(location)) {
+        expeStuff = EXPE_STUFF_FOR_LOCATION[location];
+      } else {
+        expeStuff = DEFAULT_EXPE_STUFF;
       }
     }
   }
@@ -994,7 +710,7 @@ var loadPage = function(method, url, data, onLoad) {
 
 var _loadPageVerification = function(method, url, data, onLoad, loadedPage) {
   var source = getSource(loadedPage, 1);
-  var deconnected = /Vous avez été déconnecté en raison d`une longue inactivité/.exec(source) !== null || /Déconnexion par le système du jeu/.exec(source) !== null;
+  var deconnected = /Vous avez été déconnecté en raison d’une longue inactivité/.exec(source) !== null || /Déconnexion par le système du jeu/.exec(source) !== null;
   //var failedToLoadThePage = /Une courte pause est en/.exec(getSource(loadedPage, 1)) !== null;
   var failedToLoadThePage = loadedPage.status !== 200 || /Une(?: courte)? pause est en/.exec(source) !== null || /Une pause en raison de conservation est en court/.exec(source) !== null;
   //Vous êtes prié(e) de ressayer dans quelques instants. -> 07:00:00
@@ -1034,7 +750,7 @@ var loadNextEventInfos = function(eventPage, url) {
   var minTimeLeft = null;
   var minTimeLeftExpeLocations = null;
 
-  var eventBug = /Il semblerait que l`expédition ne s`est pas terminée en temps voulu/.exec(source);
+  var eventBug = /Il semblerait que l’expédition ne s’est pas terminée en temps voulu/.exec(source);
   if(eventBug !== null) {
     var h = now.getHours();
     var m;
@@ -1118,17 +834,30 @@ var loadNextEventInfos = function(eventPage, url) {
   var allEventsToJoin = [];
   if(allEventsToJoinToJoin !== null) {
     for(var eventToJoin of allEventsToJoinToJoin) {
-      allEventsToJoin.push({
-        id: /(\d+)/.exec(eventToJoin)[1]
-      });
+      var arr = /(\d+)/.exec(eventToJoin);
+      if(arr.length > 0) {
+        allEventsToJoin.push({
+          id: arr[1]
+        });
+      } else {
+       	 updateMessage('No id found in: ' + eventToJoin);
+      }
     }
   }
 
   if(eventName === 'cevent') {
-    allExpeToJoin = allEventsToJoin;
+    if(DO_NOT_JOIN_AS_SAMA && />La possibilité de lancer la prochaine expédition: (.*?)>La possibilité de joindre la prochaine expédition: <b>MAINTENANT<\/b>/.exec(source) === null) {
+      allExpeToJoin = [];
+    } else {
+      allExpeToJoin = allEventsToJoin;
+    }
     canLaunchExpe = />La possibilité de lancer la prochaine expédition: <b>MAINTENANT<\/b>/.exec(source) !== null;
   } else if(eventName === 'swr') {
-    allKothToJoin = allEventsToJoin;
+    if(DO_NOT_JOIN_AS_SAMA && />Possibilité de commencer une nouvelle expédition Roi de la Colline: (.*?)>Possibilité de rejoindre une expédition Roi de la Colline: <b>MAINTENANT<\/b>/.exec(source) === null) {
+      allKothToJoin = [];
+    } else {
+      allKothToJoin = allEventsToJoin;
+    }
     canLaunchKoth = />Possibilité de commencer une nouvelle expédition Roi de la Colline: <b>MAINTENANT<\/b>/.exec(source) !== null;
   }
 
@@ -1171,7 +900,6 @@ var reloadUpdateModeLater = function(page, timer) {
     setTimeout(updateMode.bind(null, page), getRandomTimeoutTimer(5));
     return;
   }
-  
 };
 
 var resetCurrentPageLoadFail = function() {
@@ -1227,7 +955,7 @@ var updateStuff = function(callback, stuffIdx, page) {
 var _updateStuffVerification = function(callback, page) {
   var source = getSource(page);
 
-  if(/On a équipé l`ensemble/.exec(source) !== null) { //Stuff is ok
+  if(/On a équipé l’ensemble/.exec(source) !== null) { //Stuff is ok
     updateMessage('Stuff équipé');
     resetCurrentStuffLoadFail();
 
@@ -1240,7 +968,7 @@ var _updateStuffVerification = function(callback, page) {
         return;
       }
     });
-  } else if(/L`ensemble incomplet!/.exec(source) !== null) { //Missing part in stuff
+  } else if(/L’ensemble incomplet!/.exec(source) !== null) { //Missing part in stuff
     updateMessage('Le stuff n\'est pas complet');
     stuffOn = -1;
 
@@ -1342,12 +1070,16 @@ var updateMode = function(page) {
   var currentSeconds = now.getSeconds();
 
   // Update expedition and KotH infos
-  if((nextExpeTime !== null && nextExpeTime - now < 0) || (currentMinutes % 30 >= 25 && currentTime - lastExpeCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK)) {
+  //if((nextExpeTime !== null && nextExpeTime - now < 0) || (currentMinutes % 30 >= 25 && currentTime - lastExpeCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK)) {
+  //if((nextExpeTime !== null && nextExpeTime - now < 0) || (currentTime - lastExpeCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK)) {
+  if(currentTime - lastExpeCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK) {
     updateMessage('Mise à jour du temps de prochaine expédition');
     lastExpeCheckTime = currentTime;
     loadPage('POST', EXPE_PAGE_URL, '', loadNextEventInfos);
     return;
-  } else if((nextSwrTime !== null && nextSwrTime - now < 0) || ((currentMinutes < 5 || (30 <= currentMinutes && currentMinutes < 35)) && currentTime - lastSwrCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK)) {
+  //} else if((nextSwrTime !== null && nextSwrTime - now < 0) || ((currentMinutes < 5 || (30 <= currentMinutes && currentMinutes < 35)) && currentTime - lastSwrCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK)) {
+  //} else if((nextSwrTime !== null && nextSwrTime - now < 0) || (currentTime - lastSwrCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK)) {
+  } else if(currentTime - lastSwrCheckTime > MIN_INTERVAL_BETWEEN_EVENT_CHECK) {
     updateMessage('Mise à jour du temps de prochain rdc');
     lastSwrCheckTime = currentTime;
     loadPage('POST', SWR_PAGE_URL, '', loadNextEventInfos);
@@ -1448,14 +1180,14 @@ var updateMode = function(page) {
     return;
   }
 
-  if(atkRunning) {
+  if(atkRunning && CAN_LAUNCH_ATK) {
     if(lastRunningMode !== 'atk') {
       updateMessage('Début du mode de lancement d\'attaques');
       lastRunningMode = 'atk';
     }
     loadPage('POST', ATK_PAGE_URL, '', updateAtkMode);
     return;
-  } else if(questRunning) {
+  } else if(questRunning && CAN_LAUNCH_QUEST) {
     if(lastRunningMode !== 'quest') {
       updateMessage('Début du mode de lancement de quêtes');
       lastRunningMode = 'quest';
@@ -1464,9 +1196,9 @@ var updateMode = function(page) {
     return;
   } else {
     if(lastRunningMode) {
-      if(lastRunningMode === 'atk') {
+      if(lastRunningMode === 'atk' && CAN_LAUNCH_ATK) {
         updateMessage('Fin du mode de lancement d\'attaques');
-      } else if (lastRunningMode === 'quest') {
+      } else if (lastRunningMode === 'quest' && CAN_LAUNCH_QUEST) {
         updateMessage('Fin du mode de lancement de quêtes');
       }
 
@@ -1475,11 +1207,11 @@ var updateMode = function(page) {
       return;
     }
 
-    if(currentTime - lastTimeAtkRan > 1.5 * HOUR_IN_S * SECONDS_IN_MS) {
+    if(currentTime - lastTimeAtkRan > 1.5 * HOUR_IN_S * SECONDS_IN_MS && CAN_LAUNCH_ATK) {
       atkRunning = true;
       updateMode(page);
       return;
-    } else if(currentTime - lastTimeQuestRan > HOUR_IN_S * SECONDS_IN_MS) {
+    } else if(currentTime - lastTimeQuestRan > HOUR_IN_S * SECONDS_IN_MS && CAN_LAUNCH_QUEST) {
       questRunning = true;
       updateMode(page);
       return;
@@ -1512,6 +1244,7 @@ var updateAtkMode = function(atkPage) {
     updateMessage('Attaques restantes : ' + atkLeft);
 
     if(atkLeft > 0) {
+    //if(false && atkLeft > 0) {
       findNextAtkTarget();
       return;
     } else {
@@ -1573,7 +1306,7 @@ var launchAtk = function(page) {
 var atkJustLaunched = function(ambushPage) {
   var source = getSource(ambushPage);
 
-  if(/<td class="error">Vous n`avez pas assez de sang<\/td>/.exec(source)) {
+  if(/<td class="error">Vous n’avez pas assez de sang<\/td>/.exec(source)) {
     updateMessage('Manque de sang pour mettre les arcanes correspondantes, changement de mode');
     atkRunning = false;
     updateMode();
@@ -1618,6 +1351,7 @@ var updateQuestMode = function(questPage) {
   updateMessage('Quêtes restantes : ' + questLeft);
 
   if(questLeft > 0) {
+  //if(false && questLeft > 0) {
     if(stuffOn !== QUEST_STUFF) {
       updateStuff(updateQuestMode, QUEST_STUFF);
       return;
@@ -1716,11 +1450,11 @@ var manageAuction = function(auctionPage) {
     }
 
     // Iterate all auctions in order to find the first auction that is interesting to buy
-    var auctions = source.match(/<tr id="au_\d+"(.*\r?\n)+?.*\d{4}-\d{2}-\d{2}<br \/>\d{2}:\d{2}:\d{2}/g);
+    var auctions = source.match(/<tr id="au_\d+"(.*\r?\n)+?.*\d{4}-\d{2}-\d{2}.*?<br \/>\D+\d{2}:\d{2}:\d{2}/g);
     for(i = 0; i < auctions.length; ++i) {
       var auction = auctions[i];
 
-      var auctionInfo = /<tr id="au_(\d+)"(.*\r?\n)+?.*(\d{4})-(\d{2})-(\d{2})<br \/>(\d{2}):(\d{2}):(\d{2})/.exec(auction);
+      var auctionInfo = /<tr id="au_(\d+)"(.*\r?\n)+?.*(\d{4})-(\d{2})-(\d{2}).*?<br \/>\D+(\d{2}):(\d{2}):(\d{2})/.exec(auction);
       var auctionItemId = auctionInfo[1];
       var auctionInfoLength = auctionInfo.length;
       var endTime = new Date(parseInt(auctionInfo[auctionInfoLength-6], DECIMAL_BASE), parseInt(auctionInfo[auctionInfoLength-5], DECIMAL_BASE) - 1, parseInt(auctionInfo[auctionInfoLength-4], DECIMAL_BASE), parseInt(auctionInfo[auctionInfoLength-3], DECIMAL_BASE), parseInt(auctionInfo[auctionInfoLength-2], DECIMAL_BASE), parseInt(auctionInfo[auctionInfoLength-1], DECIMAL_BASE));
@@ -1730,6 +1464,7 @@ var manageAuction = function(auctionPage) {
       if(auctionItemPriceArray) {
         var auctionItemPrice = parseInt(auctionItemPriceArray[auctionItemPriceArray.length - 1].replace(/ /g, ''), DECIMAL_BASE);
         junkCount = auctionItemPrice / 20000;
+        //junkCount = 0; // BUY ONLY JUNK
       } else {
         var auctionJunkCountArray = /<tr id="au_(\d+)"(.*\r?\n)+?.*Ferraille pièces:(.*?)</.exec(auction);
         junkCount = parseInt(auctionJunkCountArray[auctionJunkCountArray.length -1].replace(/ /g, ''), DECIMAL_BASE);
@@ -1745,10 +1480,10 @@ var manageAuction = function(auctionPage) {
           updateMessage('Un item d\'exception à été trouvé: ' + item.name + '. Prêt à enchérir jusqu\'à ' + maxPrice + 'pdp. Fin de l\'enchère à ' + endTime);
         }
       }
-      
+
       if(item.minOverbid <= maxPrice) {
         nextAuctionTime = endTime;
-        if(!auctionInfo[0].includes('Ton offre l`emporte') && endTime - new Date() <= FOURTY_SECONDS_IN_MS) {
+        if(!auctionInfo[0].includes('Ton offre l’emporte') && endTime - new Date() <= FOURTY_SECONDS_IN_MS) {
           var itemName = items[auctionItemId].name.replace(/ /g,'+');
           var data = 'off=' + item.minOverbid + '&auId=' + auctionItemId + '&bid=ENCHÉRIR+-+' + itemName;
           updateMessage('Enchere : ' + data);
@@ -1837,12 +1572,9 @@ var launch3V3Arena = function(arenaPage, url) {
 
     var arenaLaunchedByTeamMemberId = null;
 
-    var allTeamCreatedBy = source.match(/id="expDesc_(\d+)"/g);
+    var allTeamCreatedBy = source.match(/for="join_(\d+)"/g);
     for(var i = 0; arenaLaunchedByTeamMemberId === null && allTeamCreatedBy !== null && i < allTeamCreatedBy.length; ++i) {
-      var teamCreatedBy = parseInt(/id="expDesc_(\d+)"/.exec(allTeamCreatedBy[i])[1], DECIMAL_BASE);
-
-      console.log(ARENA_3_V_3_TO_LAUNCH);
-      console.log(teamCreatedBy);
+      var teamCreatedBy = parseInt(/for="join_(\d+)"/.exec(allTeamCreatedBy[i])[1], DECIMAL_BASE);
       if(ARENA_3_V_3_TO_LAUNCH.invites.includes(teamCreatedBy)) {
         arenaLaunchedByTeamMemberId = teamCreatedBy;
       }
@@ -1877,7 +1609,7 @@ var launchClanVClanArena = function(arenaPage, url) {
 
   var source = getSource(arenaPage);
 
-  var canJoinClanVClan = /<input type="submit" class="button actionButton" name="joinClanArena" id="joinClanArena" value="REJOINS L`ARENE"/.exec(source);
+  var canJoinClanVClan = /<input type="submit" class="button actionButton" name="joinClanArena" id="joinClanArena" value="REJOINS L’ARENE"/.exec(source);
 
   if(canJoinClanVClan) {
     updateMessage('Il y a une arène clan v clan à lancer');
@@ -1912,16 +1644,30 @@ var joinExpe = function(expePage) {
   }
 
   completeAllExpeToJoin(source, allExpeToJoin); // Complete the following information: launcherId, location, numberOfPlayer, maxNumberOfPlayer, isCut
-  var hasJoinedAnExpeToday = /La possibilité de joindre la prochaine expédition: <b>MAINTENANT<\/b><\/td>/.exec(source) === null || /Ta demande est en attente de l`acceptation du fondateur de l`expédition(?:.*\r?\n)\s+\r?\n/.exec(source) !== null;
+  var hasJoinedAnExpeToday = /La possibilité de joindre la prochaine expédition: <b>MAINTENANT<\/b><\/td>/.exec(source) === null || /Ta demande est en attente de l’acceptation du fondateur de l’expédition(?:.*\r?\n)\s+\r?\n/.exec(source) !== null;
   if(allExpeToJoin.length <= 0) {
     allExpeToJoin = [];
-    updateStuff(updateMode, DEF_STUFF);
-    return;
+    if(stuffOn !== DEF_STUFF) {
+      updateStuff(updateMode, DEF_STUFF);
+      return;
+    } else {
+      updateMode();
+      return;
+    }
   } else {
     var nextExpeStuffToWear = -1;
     for(var i = 0; i < allExpeToJoin.length; ++i) {
       var expe = allExpeToJoin[i];
-      if(expe.isCut && expe.maxNumberOfPlayer !== null) {
+      if((expe.isCut && expe.maxNumberOfPlayer !== null) || BLACKLIST.includes(expe.launcherId)) {
+        continue;
+      }
+
+      var settingForceALauncher = typeof NON_SAMA_EXPO_TO_JOIN.launcher !== 'undefined';
+      var launcherIsOkay = typeof NON_SAMA_EXPO_TO_JOIN.forbiddenLauncher === 'undefined' || !NON_SAMA_EXPO_TO_JOIN.forbiddenLauncher.includes(expe.launcherId);
+      var expeIsOnTheRightLocation = expe.location === NON_SAMA_EXPO_TO_JOIN.location;
+      var expeIsNotTooMuchCrowded = NON_SAMA_EXPO_TO_JOIN.maxParticipant === null || (expe.numberOfPlayer < NON_SAMA_EXPO_TO_JOIN.maxParticipant && expe.maxNumberOfPlayer !== null && expe.maxNumberOfPlayer <= NON_SAMA_EXPO_TO_JOIN.maxParticipant);
+      var iAmNotSamaritan = !hasJoinedAnExpeToday && (NON_SAMA_EXPO_TO_JOIN.launcher === expe.launcherId || (!settingForceALauncher && launcherIsOkay && expeIsOnTheRightLocation && expeIsNotTooMuchCrowded));
+      if(!iAmNotSamaritan && DO_NOT_JOIN_AS_SAMA) {
         continue;
       }
 
@@ -1933,11 +1679,10 @@ var joinExpe = function(expePage) {
 
           updateMessage('En train de joindre l\'expédition ' + expe.id);
           if(true || !hasJoinedAnExpeToday || expe.location !== NON_SAMA_EXPO_TO_JOIN.location) {
-           	var iAmNotSamaritan = !hasJoinedAnExpeToday && expe.location === NON_SAMA_EXPO_TO_JOIN.location && (NON_SAMA_EXPO_TO_JOIN.maxParticipant === null || (expe.numberOfPlayer < NON_SAMA_EXPO_TO_JOIN.maxParticipant && expe.maxNumberOfPlayer !== null && expe.maxNumberOfPlayer <= NON_SAMA_EXPO_TO_JOIN.maxParticipant));
             var ouu = iAmNotSamaritan ? OUU_TO_LAUNCH_EXPO : 0;
             var data = 'join%5B%5D=' + expe.id + '&samarytanin=' + (iAmNotSamaritan ? '0' : '1') + arkEvoFor(expeArkEvo) + '&onetimeSelected=' + ouu + '&joinEvent=Joindre+les+exp%C3%A9ditions+choisies';
             loadPage('POST', EXPE_JOIN_PAGE_URL, data, joinExpe);
-            return; 
+            return;
           } else {
             // Do not join an expe as non samaritain while I might join it myself after midnight
           }
@@ -1962,8 +1707,13 @@ var joinExpe = function(expePage) {
       return;
     } else {
       allExpeToJoin = [];
-      updateStuff(updateMode, DEF_STUFF);
-      return;
+      if(stuffOn !== DEF_STUFF) {
+        updateStuff(updateMode, DEF_STUFF);
+        return;
+      } else {
+        updateMode();
+        return;
+      }
     }
   }
 };
@@ -2008,10 +1758,6 @@ var tryLaunchingExpeThroughSacrifice = function(sacrificePage) {
 
 var joinKoth = function(swrPage) {
   lastTryToJoinKothTime = new Date().getTime();
-  if(stuffOn !== STUFF_TO_JOIN_RDC) {
-    updateStuff(joinKoth, STUFF_TO_JOIN_RDC, swrPage);
-    return;
-  }
 
   var source = getSource(swrPage);
   if(/Possibilité de rejoindre une expédition Roi de la Colline/.exec(source) === null) {
@@ -2021,15 +1767,33 @@ var joinKoth = function(swrPage) {
 
   completeAllExpeToJoin(source, allKothToJoin); // Complete the following information: launcherId, location, numberOfPlayer, maxNumberOfPlayer, isCut
   var koth = allKothToJoin.shift();
+  while(koth && (BLACKLIST.includes(koth.launcherId) || (DO_NOT_JOIN_AS_SAMA && /Possibilité de rejoindre une expédition Roi de la Colline: <b>MAINTENANT<\/b></.exec(source) === null || /Ta demande est en attente de l’acceptation du fondateur de l’expédition(?:.*\r?\n)\s+\r?\n/.exec(source) !== null)))
+    koth = allKothToJoin.shift()
+
   if(typeof koth !== 'undefined') {
+    if(stuffOn !== STUFF_TO_JOIN_RDC) {
+      allKothToJoin.push(koth);
+      updateStuff(joinKoth, STUFF_TO_JOIN_RDC, swrPage);
+      return;
+    }
+    
     updateMessage('En train de joindre le rdc ' + koth.id);
-    var iAmSamaritan = /Possibilité de rejoindre une expédition Roi de la Colline: <b>MAINTENANT<\/b></.exec(source) === null || /Ta demande est en attente de l`acceptation du fondateur de l`expédition(?:.*\r?\n)\s+\r?\n/.exec(source) !== null;
+    var hasJoinedAKothToday = /Possibilité de rejoindre une expédition Roi de la Colline: <b>MAINTENANT<\/b></.exec(source) === null || /Ta demande est en attente de l’acceptation du fondateur de l’expédition(?:.*\r?\n)\s+\r?\n/.exec(source) !== null;
+    var kothIsOnTheRightLocation = typeof NON_SAMA_KOTH_TO_JOIN === 'undefined' || typeof NON_SAMA_KOTH_TO_JOIN.location === 'undefined' || koth.location === NON_SAMA_KOTH_TO_JOIN.location;
+    var kothIsOnTheRightDifficulty = typeof NON_SAMA_KOTH_TO_JOIN === 'undefined' || typeof NON_SAMA_KOTH_TO_JOIN.difficulty === 'undefined' || koth.difficulty === NON_SAMA_KOTH_TO_JOIN.difficulty;
+    var iAmSamaritan = hasJoinedAKothToday || !(kothIsOnTheRightLocation && kothIsOnTheRightDifficulty);
+
     var data = 'join%5B%5D=' + koth.id + '&samarytanin=' + (iAmSamaritan ? '1' : '0') + arkEvoFor(ARK_EVO_TO_JOIN_RDC) + '&onetimeSelected=0&joinEvent=Joindre+les+exp%C3%A9ditions+choisies';
     loadPage('POST', SWR_JOIN_PAGE_URL, data, joinKoth);
     return;
   } else {
-    updateStuff(updateMode, DEF_STUFF);
-    return;
+    if(stuffOn !== DEF_STUFF) {
+      updateStuff(updateMode, DEF_STUFF);
+      return;
+    } else {
+      updateMode();
+      return;
+    }
   }
 };
 
@@ -2041,7 +1805,7 @@ var launchKoth = function() {
 
   canLaunchKoth = false;
   updateMessage('En train de lancer un rdc sur le site ' + RDC_TO_LAUNCH.location);
-  var data = 'locsel=' + RDC_SITE[RDC_TO_LAUNCH.location] + arkEvoFor(ARK_EVO_TO_JOIN_RDC) + '&onetimeSelected=0submit=LANCER+L%60EXP%C3%89DITION';
+  var data = 'locsel=' + RDC_SITE[RDC_TO_LAUNCH.location] + '&handicap=' + (RDC_TO_LAUNCH.difficulty - 1) + arkEvoFor(ARK_EVO_TO_JOIN_RDC) + '&onetimeSelected=0submit=LANCER+L%60EXP%C3%89DITION';
   loadPage('POST', SWR_LAUNCH_PAGE_URL, data, manageInvitesOnLaunchedEvent.bind(null, RDC_TO_LAUNCH, null));
   return;
 };
@@ -2132,7 +1896,7 @@ var updateMessage = function(newText, doNotDisplay) {
 
   //log the message first
   var logs;
-  return GM.getValue(SERV + '_bwAtkAndQuest_log').then(function(raw_logs) {
+  return GM.getValue(SERV_AND_ME_LABEL + '_bwAtkAndQuest_log').then(function(raw_logs) {
     if(raw_logs) {
       logs = JSON.parse(raw_logs);
     } else {
@@ -2142,7 +1906,7 @@ var updateMessage = function(newText, doNotDisplay) {
     if(logs.length > 2000) {
       logs.shift();
     }
-    GM.setValue(SERV + '_bwAtkAndQuest_log', JSON.stringify(logs));
+    GM.setValue(SERV_AND_ME_LABEL + '_bwAtkAndQuest_log', JSON.stringify(logs));
 
     //now update the message list
     if(!doNotDisplay) {
@@ -2195,6 +1959,11 @@ var addUI = function() {
     return;
   }
 
+  if(!configIsOkay()) {
+    updateMessage('Script misconfigured, no action will be done.');
+    return;
+  }
+
   document.getElementById('scriptAtkQuestButton').addEventListener('click', function() {
     if(!scriptRunning) {
       scriptRunning = true;
@@ -2207,7 +1976,7 @@ var addUI = function() {
 
   document.getElementById('scriptQuestOuuSelect').addEventListener('change', function(evt) {
     selectedOuu = parseInt(evt.target.value, DECIMAL_BASE);
-    GM.setValue('bwAtkAndQuest_' + SERV + '_ouu', selectedOuu);
+    GM.setValue('bwAtkAndQuest_' + SERV_AND_ME_LABEL + '_ouu', selectedOuu);
     updateMessage('Mise à jour de l\'ouu : ' + evt.target.selectedOptions[0].text.toLowerCase());
   }, false);
 };
@@ -2215,17 +1984,18 @@ var addUI = function() {
 var init = function() {
   var displayLogs = true;
   if(displayLogs) {
-    GM.getValue(SERV + '_bwAtkAndQuest_log').then(function(raw_logs) {
+    GM.getValue(SERV_AND_ME_LABEL + '_bwAtkAndQuest_log').then(function(raw_logs) {
       if(raw_logs) {
         logs = JSON.parse(raw_logs);
         console.log(logs);
       }
     });
   }
-  
+
   if (location.search === '?a=ambush' || location.search === '?a=quest') {
-    GM.getValue('bwAtkAndQuest_' + SERV + '_ouu', -1).then(function(lastSelectedOuu) {
+    GM.getValue('bwAtkAndQuest_' + SERV_AND_ME_LABEL + '_ouu', -1).then(function(lastSelectedOuu) {
       selectedOuu = lastSelectedOuu;
+      console.log('addingUI');
       addUI();
     });
   }
